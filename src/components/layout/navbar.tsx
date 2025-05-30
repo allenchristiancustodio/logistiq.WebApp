@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useKindeAuth } from "@kinde-oss/kinde-auth-react";
+import { useUser } from "@clerk/clerk-react";
 import { Bell, Menu, Moon, Settings, Sun, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,18 +10,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useAuthStore } from "@/stores/auth-store";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/use-auth"; // Our custom hook
 import { useUIStore } from "@/stores/ui-store";
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const { user: kindeUser } = useKindeAuth();
-  const { user, logout } = useAuthStore();
+  const { user: clerkUser } = useUser();
+  const { user: storeUser, logout } = useAuth();
   const { toggleSidebar, isDarkMode, toggleDarkMode } = useUIStore();
 
-  const displayName = user?.fullName || kindeUser?.givenName || "User";
-  const email = user?.email || kindeUser?.email || "";
+  const displayName = storeUser?.fullName || clerkUser?.fullName || "User";
+  const email =
+    storeUser?.email || clerkUser?.emailAddresses[0]?.emailAddress || "";
   const initials = displayName
     .split(" ")
     .map((n) => n[0])
@@ -29,8 +30,9 @@ export default function Navbar() {
     .toUpperCase()
     .slice(0, 2);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    console.log("🚪 Logging out from navbar");
+    await logout();
   };
 
   return (
@@ -97,6 +99,7 @@ export default function Navbar() {
                 className="flex items-center gap-3 hover:bg-gray-50"
               >
                 <Avatar className="w-8 h-8">
+                  <AvatarImage src={clerkUser?.imageUrl} />
                   <AvatarFallback className="bg-blue-600 text-white text-sm">
                     {initials}
                   </AvatarFallback>
@@ -109,6 +112,11 @@ export default function Navbar() {
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{displayName}</p>
                   <p className="text-xs text-muted-foreground">{email}</p>
+                  {storeUser?.currentCompanyName && (
+                    <p className="text-xs text-blue-600">
+                      {storeUser.currentCompanyName}
+                    </p>
+                  )}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

@@ -1,11 +1,13 @@
+// src/hooks/use-api.ts - Updated for Clerk
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
 import {
   apiClient,
+  useApiClient,
   type CreateCompanyRequest,
   type CreateOrUpdateUserRequest,
   type SwitchCompanyRequest,
 } from "@/lib/api-client";
-import { useAuthStore } from "@/stores/auth-store";
 
 // Query keys
 export const queryKeys = {
@@ -19,6 +21,7 @@ export const queryKeys = {
 
 // Test hooks
 export const usePing = () => {
+  useApiClient(); // Initialize API client
   return useQuery({
     queryKey: queryKeys.ping,
     queryFn: () => apiClient.ping(),
@@ -26,17 +29,20 @@ export const usePing = () => {
 };
 
 export const useAuthTest = () => {
-  const { token } = useAuthStore();
+  const { isSignedIn } = useAuth();
+  useApiClient(); // Initialize API client
+
   return useQuery({
     queryKey: queryKeys.authTest,
     queryFn: () => apiClient.authTest(),
-    enabled: !!token,
+    enabled: isSignedIn,
   });
 };
 
 // User hooks
 export const useCreateOrUpdateUser = () => {
   const queryClient = useQueryClient();
+  useApiClient(); // Initialize API client
 
   return useMutation({
     mutationFn: (data: CreateOrUpdateUserRequest) =>
@@ -48,27 +54,30 @@ export const useCreateOrUpdateUser = () => {
 };
 
 export const useCurrentUser = () => {
-  const { token, isAuthenticated } = useAuthStore();
+  const { isSignedIn } = useAuth();
+  useApiClient(); // Initialize API client
 
   return useQuery({
     queryKey: queryKeys.user,
     queryFn: () => apiClient.getCurrentUser(),
-    enabled: isAuthenticated && !!token,
+    enabled: isSignedIn,
   });
 };
 
 export const useUserCompanies = () => {
-  const { token, isAuthenticated } = useAuthStore();
+  const { isSignedIn } = useAuth();
+  useApiClient(); // Initialize API client
 
   return useQuery({
     queryKey: queryKeys.userCompanies,
     queryFn: () => apiClient.getUserCompanies(),
-    enabled: isAuthenticated && !!token,
+    enabled: isSignedIn,
   });
 };
 
 export const useSwitchCompany = () => {
   const queryClient = useQueryClient();
+  useApiClient(); // Initialize API client
 
   return useMutation({
     mutationFn: (data: SwitchCompanyRequest) => apiClient.switchCompany(data),
@@ -83,6 +92,7 @@ export const useSwitchCompany = () => {
 // Company hooks
 export const useCreateCompany = () => {
   const queryClient = useQueryClient();
+  useApiClient(); // Initialize API client
 
   return useMutation({
     mutationFn: (data: CreateCompanyRequest) => apiClient.createCompany(data),
@@ -95,12 +105,13 @@ export const useCreateCompany = () => {
 };
 
 export const useCurrentCompany = () => {
-  const { token, isAuthenticated, user } = useAuthStore();
+  const { isSignedIn } = useAuth();
+  useApiClient(); // Initialize API client
 
   return useQuery({
     queryKey: queryKeys.currentCompany,
     queryFn: () => apiClient.getCurrentCompany(),
-    enabled: isAuthenticated && !!token && !!user?.hasActiveCompany,
+    enabled: isSignedIn,
   });
 };
 
@@ -111,17 +122,19 @@ export const useProducts = (params?: {
   searchTerm?: string;
   categoryId?: string;
 }) => {
-  const { token, isAuthenticated, user } = useAuthStore();
+  const { isSignedIn } = useAuth();
+  useApiClient(); // Initialize API client
 
   return useQuery({
     queryKey: queryKeys.products(params),
     queryFn: () => apiClient.getProducts(params),
-    enabled: isAuthenticated && !!token && !!user?.hasActiveCompany,
+    enabled: isSignedIn,
   });
 };
 
 export const useCreateProduct = () => {
   const queryClient = useQueryClient();
+  useApiClient(); // Initialize API client
 
   return useMutation({
     mutationFn: (data: any) => apiClient.createProduct(data),

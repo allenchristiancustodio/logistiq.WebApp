@@ -8,8 +8,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuth } from "@/hooks/use-auth";
 import { useUserCompanies, useSwitchCompany } from "@/hooks/use-api";
+import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "sonner";
 
 interface CompanySwitcherProps {
@@ -18,10 +19,12 @@ interface CompanySwitcherProps {
 
 export default function CompanySwitcher({ isCollapsed }: CompanySwitcherProps) {
   const navigate = useNavigate();
-  const { user, updateUserCompany, token, isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuth();
+  const { updateUserCompany } = useAuthStore();
   const { data: companies, isLoading } = useUserCompanies();
   const switchCompanyMutation = useSwitchCompany();
 
+  const { user } = useAuthStore();
   const currentCompanyName = user?.currentCompanyName || "Select Company";
   const currentCompanyId = user?.currentCompanyId;
 
@@ -33,23 +36,23 @@ export default function CompanySwitcher({ isCollapsed }: CompanySwitcherProps) {
       return;
 
     try {
-      console.log("Switching to company:", { companyId, companyName });
+      console.log("🔄 Switching to company:", { companyId, companyName });
 
       const result = await switchCompanyMutation.mutateAsync({
         companyId,
       });
 
-      console.log("Company switch result:", result);
+      console.log("✅ Company switch result:", result);
 
-      // Update auth store
+      // Update store
       updateUserCompany(result.currentCompanyId, result.currentCompanyName);
 
       toast.success(`Switched to ${companyName}`);
 
-      // Optionally reload the page to refresh company-specific data
+      // Optionally reload to refresh company-specific data
       window.location.reload();
     } catch (error: any) {
-      console.error("Failed to switch company:", error);
+      console.error("❌ Failed to switch company:", error);
       toast.error("Failed to switch company");
     }
   };
@@ -59,7 +62,7 @@ export default function CompanySwitcher({ isCollapsed }: CompanySwitcherProps) {
   };
 
   // Don't render if user is not authenticated
-  if (!isAuthenticated || !token) {
+  if (!isAuthenticated) {
     return null;
   }
 

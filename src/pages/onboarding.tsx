@@ -49,7 +49,7 @@ type CompanyFormData = z.infer<typeof companySchema>;
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
-  const { user, setUser, token } = useAuthStore();
+  const { user, setUser} = useAuthStore();
   const createCompanyMutation = useCreateCompany();
 
   const form = useForm<CompanyFormData>({
@@ -80,7 +80,7 @@ export default function OnboardingPage() {
       console.log("Company creation result:", result);
 
       // Update the user state to reflect they now have an active company
-      if (user && token) {
+      if (user) {
         setUser(
           {
             ...user,
@@ -88,7 +88,7 @@ export default function OnboardingPage() {
             currentCompanyId: result.id,
             currentCompanyName: result.name,
           },
-          token
+          
         );
       }
 

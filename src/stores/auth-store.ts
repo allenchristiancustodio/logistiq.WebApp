@@ -1,128 +1,105 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export interface User {
-  id: string
-  email: string
-  fullName: string
-  hasActiveCompany: boolean
-  currentCompanyId?: string
-  currentCompanyName?: string
+  id: string;
+  email: string;
+  fullName: string;
+  hasActiveCompany: boolean;
+  currentCompanyId?: string;
+  currentCompanyName?: string;
 }
 
 export interface Company {
-  id: string
-  name: string
-  role: string
-  isActive: boolean
-  joinedAt: string
+  id: string;
+  name: string;
+  role: string;
+  isActive: boolean;
+  joinedAt: string;
 }
 
 interface AuthState {
-  // Auth status
-  isAuthenticated: boolean
-  isLoading: boolean
-  isInitialized: boolean
-  lastInitializedEmail: string | null
-  
-  // User data
-  user: User | null
-  token: string | null
-  companies: Company[]
-  
+  // Company-specific state (Clerk handles user state)
+  user: User | null;
+  companies: Company[];
+  hasActiveCompany: boolean;
+  currentCompanyId?: string;
+  currentCompanyName?: string;
+
   // Actions
-  setUser: (user: User, token: string) => void
-  updateUserCompany: (companyId?: string, companyName?: string) => void
-  setCompanies: (companies: Company[]) => void
-  setLoading: (loading: boolean) => void
-  setInitialized: (initialized: boolean, email?: string) => void
-  clearAuth: () => void
-  logout: () => void
+  setUser: (user: User) => void;
+  updateUserCompany: (companyId?: string, companyName?: string) => void;
+  setCompanies: (companies: Company[]) => void;
+  clearCompanyData: () => void;
+
+  // Helper getters
+  needsOnboarding: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       // Initial state
-      isAuthenticated: false,
-      isLoading: false,
-      isInitialized: false,
-      lastInitializedEmail: null,
       user: null,
-      token: null,
       companies: [],
+      hasActiveCompany: false,
+      currentCompanyId: undefined,
+      currentCompanyName: undefined,
 
       // Actions
-      setUser: (user: User, token: string) => {
+      setUser: (user: User) => {
+        console.log("🔄 Setting user in store:", user.email);
         set({
-          isAuthenticated: true,
           user,
-          token,
-          isLoading: false,
-          isInitialized: true,
-          lastInitializedEmail: user.email,
-        })
+          hasActiveCompany: user.hasActiveCompany,
+          currentCompanyId: user.currentCompanyId,
+          currentCompanyName: user.currentCompanyName,
+        });
       },
 
       updateUserCompany: (companyId?: string, companyName?: string) => {
-        const currentUser = get().user
+        const currentUser = get().user;
         if (currentUser) {
+          console.log("🔄 Updating user company:", { companyId, companyName });
+          const updatedUser = {
+            ...currentUser,
+            currentCompanyId: companyId,
+            currentCompanyName: companyName,
+            hasActiveCompany: !!companyId,
+          };
           set({
-            user: {
-              ...currentUser,
-              currentCompanyId: companyId,
-              currentCompanyName: companyName,
-              hasActiveCompany: !!companyId,
-            },
-          })
+            user: updatedUser,
+            hasActiveCompany: !!companyId,
+            currentCompanyId: companyId,
+            currentCompanyName: companyName,
+          });
         }
       },
 
       setCompanies: (companies: Company[]) => {
-        set({ companies })
+        set({ companies });
       },
 
-      setLoading: (loading: boolean) => {
-        set({ isLoading: loading })
-      },
-
-      setInitialized: (initialized: boolean, email?: string) => {
+      clearCompanyData: () => {
+        console.log("🧹 Clearing company data");
         set({
-          isInitialized: initialized,
-          lastInitializedEmail: email || null,
-        })
-      },
-
-      clearAuth: () => {
-        set({
-          isAuthenticated: false,
           user: null,
-          token: null,
           companies: [],
-          isLoading: false,
-          isInitialized: false,
-          lastInitializedEmail: null,
-        })
+          hasActiveCompany: false,
+          currentCompanyId: undefined,
+          currentCompanyName: undefined,
+        });
       },
 
-      logout: () => {
-        // Clear auth state
-        get().clearAuth()
-        
-        // Redirect to Kinde logout
-        window.location.href = '/api/auth/logout'
+      // Helper getters
+      needsOnboarding: () => {
+        const user = get().user;
+        return user ? !user.hasActiveCompany : false;
       },
     }),
     {
-      name: 'auth-storage',
-      partialize: (state) => ({
-        isAuthenticated: state.isAuthenticated,
-        user: state.user,
-        token: state.token,
-        companies: state.companies,
-        isInitialized: state.isInitialized,
-        lastInitializedEmail: state.lastInitializedEmail,
-      }),
+      name: "logistiq-auth-v2", // Changed name to reset old Kinde data
+      version: 2, // Increment version to clear old data
     }
   )
-)
+);

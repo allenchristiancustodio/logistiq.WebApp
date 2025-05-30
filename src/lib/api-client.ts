@@ -1,4 +1,4 @@
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuth } from "@clerk/clerk-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -47,8 +47,24 @@ export interface SwitchCompanyRequest {
 }
 
 class ApiClient {
-  private getAuthHeaders(): HeadersInit {
-    const token = useAuthStore.getState().token;
+  private getToken: (() => Promise<string | null>) | null = null;
+
+  // Set the token getter function (called from components)
+  setTokenGetter(getter: () => Promise<string | null>) {
+    this.getToken = getter;
+  }
+
+  private async getAuthHeaders(): Promise<HeadersInit> {
+    let token: string | null = null;
+
+    if (this.getToken) {
+      try {
+        token = await this.getToken();
+      } catch (error) {
+        console.warn("Failed to get auth token:", error);
+      }
+    }
+
     return {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -64,7 +80,7 @@ class ApiClient {
     const response = await fetch(url, {
       ...options,
       headers: {
-        ...this.getAuthHeaders(),
+        ...(await this.getAuthHeaders()),
         ...options.headers,
       },
     });
@@ -166,3 +182,13 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+// Hook to initialize API client with Clerk token
+export function useApiClient() {
+  const { getToken } = useAuth();
+
+  // Set the token getter on the API client
+  apiClient.setTokenGetter(getToken);
+
+  return apiClient;
+}

@@ -1,4 +1,4 @@
-import ApiDebugComponent from "@/components/debug/api-debug";
+// import ApiDebugComponent from "@/components/debug/api-debug";
 
 export default function DashboardPage() {
   return (
@@ -8,7 +8,7 @@ export default function DashboardPage() {
         <p className="text-gray-600 mt-1">Welcome to your Logistiq dashboard</p>
       </div>
 
-      <ApiDebugComponent />
+      {/* <ApiDebugComponent /> */}
     </div>
   );
 }
