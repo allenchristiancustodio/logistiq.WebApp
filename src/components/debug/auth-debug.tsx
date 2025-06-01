@@ -62,10 +62,10 @@ export default function DebugAuth() {
       console.log("API Test Result:", { status: response.status, result });
 
       if (response.ok) {
-        alert("✅ API Connection Successful!\n" + result);
+        alert("API Connection Successful!\n" + result);
       } else {
         alert(
-          "❌ API Connection Failed!\nStatus: " +
+          "API Connection Failed!\nStatus: " +
             response.status +
             "\nResponse: " +
             result
@@ -74,7 +74,7 @@ export default function DebugAuth() {
     } catch (error: unknown) {
       console.error("API Test Error:", error);
       alert(
-        "❌ API Test Error: " +
+        "API Test Error: " +
           (error instanceof Error ? error.message : String(error))
       );
     }
@@ -130,7 +130,7 @@ export default function DebugAuth() {
 
         {/* JWT Token Testing */}
         <div>
-          <h3 className="font-semibold mb-2">🔑 JWT Token</h3>
+          <h3 className="font-semibold mb-2"> JWT Token</h3>
           <div className="space-y-3">
             <Button onClick={handleGetToken}>Get JWT Token</Button>
             <Button onClick={testAPI} variant="outline">

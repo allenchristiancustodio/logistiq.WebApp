@@ -22,6 +22,36 @@ export interface UserResponse {
   phone?: string;
   imageUrl?: string;
   isActive: boolean;
+  hasCompletedOnboarding: boolean;
+}
+
+export interface CompleteUserOnboardingRequest {
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  preferences?: string;
+}
+
+export interface UpdateUserProfileRequest {
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  preferences?: string;
+}
+
+export interface CompleteOrganizationSetupRequest {
+  description?: string;
+  industry?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  taxId?: string;
+  businessRegistrationNumber?: string;
+  defaultCurrency?: string;
+  timeZone?: string;
+  dateFormat?: string;
+  multiLocationEnabled?: boolean;
 }
 
 export interface SyncOrganizationRequest {
@@ -50,6 +80,22 @@ export interface OrganizationResponse {
   website?: string;
   isActive: boolean;
   createdAt: string;
+  hasCompletedSetup: boolean;
+}
+
+export interface UpdateOrganizationRequest {
+  description?: string;
+  industry?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  taxId?: string;
+  businessRegistrationNumber?: string;
+  defaultCurrency?: string;
+  timeZone?: string;
+  dateFormat?: string;
+  multiLocationEnabled?: boolean;
 }
 
 export interface CreateProductRequest {
@@ -207,6 +253,24 @@ class ApiClient {
     });
   }
 
+  async updateUserProfile(
+    data: UpdateUserProfileRequest
+  ): Promise<UserResponse> {
+    return this.request("/users/profile", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async completeUserOnboarding(
+    data: CompleteUserOnboardingRequest
+  ): Promise<UserResponse> {
+    return this.request("/users/complete-onboarding", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   async getCurrentUser(): Promise<UserResponse> {
     return this.request("/users/me");
   }
@@ -217,6 +281,24 @@ class ApiClient {
   ): Promise<OrganizationResponse> {
     return this.request("/organizations/sync", {
       method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async completeOrganizationSetup(
+    data: CompleteOrganizationSetupRequest
+  ): Promise<OrganizationResponse> {
+    return this.request("/organizations/complete-setup", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateOrganization(
+    data: UpdateOrganizationRequest
+  ): Promise<OrganizationResponse> {
+    return this.request("/organizations/current", {
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }

@@ -18,6 +18,7 @@ import InventoryPage from "@/pages/inventory";
 import UsersPage from "@/pages/userpage";
 import SettingsPage from "@/pages/settings";
 import ExpensesPage from "@/pages/expenses";
+import OnboardingPage from "./pages/onboarding";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -66,8 +67,6 @@ function App() {
                 {/* Public Routes */}
                 <Route path="/login/*" element={<LoginPage />} />
                 <Route path="/register/*" element={<RegisterPage />} />
-
-                {/* SSO Callback Route - Required for Clerk OAuth/SSO */}
                 <Route path="/sso-callback" element={<SSOCallbackPage />} />
 
                 {/* Protected Routes with Layout */}
@@ -80,6 +79,7 @@ function App() {
                     path="/create-organization"
                     element={<CreateOrganizationPage />}
                   />
+                  <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/products" element={<ProductsPage />} />
                   <Route path="/inventory" element={<InventoryPage />} />

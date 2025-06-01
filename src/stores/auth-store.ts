@@ -13,6 +13,7 @@ export interface User {
   phone?: string;
   imageUrl?: string;
   isActive: boolean;
+  hasCompletedOnboarding: boolean;
 }
 
 export interface Organization {
@@ -29,6 +30,7 @@ export interface Organization {
   website?: string;
   isActive: boolean;
   createdAt: string;
+  hasCompletedSetup: boolean;
 }
 
 interface AuthState {

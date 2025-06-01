@@ -7,7 +7,12 @@ import {
   type SyncOrganizationRequest,
   type CreateProductRequest,
   type ProductSearchRequest,
+  type UpdateUserProfileRequest,
+  type UpdateOrganizationRequest,
+  type CompleteUserOnboardingRequest,
+  type CompleteOrganizationSetupRequest,
 } from "@/lib/api-client";
+import { useAuthStore } from "@/stores/auth-store";
 
 // Query keys
 export const queryKeys = {
@@ -52,6 +57,37 @@ export const useSyncUser = () => {
   });
 };
 
+export const useCompleteUserOnboarding = () => {
+  const queryClient = useQueryClient();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (data: CompleteUserOnboardingRequest) =>
+      apiClient.completeUserOnboarding(data),
+    onSuccess: (user) => {
+      // Update store immediately
+      const { setUser } = useAuthStore.getState();
+      setUser(user);
+
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.user });
+    },
+  });
+};
+
+export const useUpdateUserProfile = () => {
+  const queryClient = useQueryClient();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (data: UpdateUserProfileRequest) =>
+      apiClient.updateUserProfile(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.user });
+    },
+  });
+};
+
 export const useCurrentUser = () => {
   const { isSignedIn } = useAuth();
   useApiClient();
@@ -72,6 +108,41 @@ export const useSyncOrganization = () => {
   return useMutation({
     mutationFn: (data: SyncOrganizationRequest) =>
       apiClient.syncOrganization(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.currentOrganization,
+      });
+    },
+  });
+};
+
+export const useCompleteOrganizationSetup = () => {
+  const queryClient = useQueryClient();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (data: CompleteOrganizationSetupRequest) =>
+      apiClient.completeOrganizationSetup(data),
+    onSuccess: (organization) => {
+      // Update store immediately
+      const { setOrganization } = useAuthStore.getState();
+      setOrganization(organization);
+
+      // Invalidate queries
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.currentOrganization,
+      });
+    },
+  });
+};
+
+export const useUpdateOrganization = () => {
+  const queryClient = useQueryClient();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (data: UpdateOrganizationRequest) =>
+      apiClient.updateOrganization(data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.currentOrganization,
