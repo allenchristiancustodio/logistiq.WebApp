@@ -2,54 +2,110 @@ import { useAuth } from "@clerk/clerk-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-export interface CreateOrUpdateUserRequest {
+// Updated DTOs to match backend
+export interface SyncUserRequest {
   email: string;
   firstName: string;
   lastName: string;
   phone?: string;
+  imageUrl?: string;
 }
 
-export interface UserResult {
-  userId: string;
+export interface UserResponse {
+  id: string;
+  clerkUserId: string;
   email: string;
+  firstName: string;
+  lastName: string;
   fullName: string;
-  isNewUser: boolean;
-  hasActiveCompany: boolean;
-  currentCompanyId?: string;
-  currentCompanyName?: string;
+  currentOrganizationId?: string;
+  phone?: string;
+  imageUrl?: string;
+  isActive: boolean;
 }
 
-export interface CreateCompanyRequest {
+export interface SyncOrganizationRequest {
   name: string;
+  slug?: string;
   description?: string;
+  imageUrl?: string;
+  industry?: string;
   address?: string;
   phone?: string;
   email?: string;
   website?: string;
 }
 
-export interface CompanyResult {
+export interface OrganizationResponse {
   id: string;
+  clerkOrganizationId: string;
   name: string;
-  isOwner: boolean;
-}
-
-export interface UserCompany {
-  id: string;
-  name: string;
-  role: string;
+  slug?: string;
+  description?: string;
+  imageUrl?: string;
+  industry?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
   isActive: boolean;
-  joinedAt: string;
+  createdAt: string;
 }
 
-export interface SwitchCompanyRequest {
-  companyId: string;
+export interface CreateProductRequest {
+  name: string;
+  description?: string;
+  sku: string;
+  barcode?: string;
+  categoryId?: string;
+  price: number;
+  costPrice?: number;
+  stockQuantity: number;
+  minStockLevel?: number;
+  maxStockLevel?: number;
+  unit?: string;
+}
+
+export interface ProductResponse {
+  id: string;
+  name: string;
+  description?: string;
+  sku: string;
+  barcode?: string;
+  categoryId?: string;
+  categoryName?: string;
+  price: number;
+  costPrice?: number;
+  stockQuantity: number;
+  minStockLevel?: number;
+  maxStockLevel?: number;
+  unit?: string;
+  status: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface ProductSearchRequest {
+  page?: number;
+  pageSize?: number;
+  searchTerm?: string;
+  categoryId?: string;
+  status?: string;
+}
+
+export interface PagedProductResponse {
+  products: ProductResponse[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
 }
 
 class ApiClient {
   private getToken: (() => Promise<string | null>) | null = null;
 
-  // Set the token getter function (called from components)
   setTokenGetter(getter: () => Promise<string | null>) {
     this.getToken = getter;
   }
@@ -76,35 +132,62 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
+    const maxRetries = 3;
+    let retryCount = 0;
 
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...(await this.getAuthHeaders()),
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-
+    while (retryCount <= maxRetries) {
       try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.message || errorJson.error || errorMessage;
-      } catch {
-        errorMessage = errorText || errorMessage;
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...(await this.getAuthHeaders()),
+            ...options.headers,
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || errorJson.error || errorMessage;
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return response.json();
+        }
+
+        return response.text() as unknown as T;
+      } catch (error: any) {
+        // Check if it's a network error that might benefit from retry
+        const isRetryableError =
+          error.message.includes("ERR_INSUFFICIENT_RESOURCES") ||
+          error.message.includes("Failed to fetch") ||
+          error.message.includes("Network Error");
+
+        if (isRetryableError && retryCount < maxRetries) {
+          retryCount++;
+          const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+          console.warn(
+            `Request failed, retrying in ${delay}ms... (${retryCount}/${maxRetries})`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        // If not retryable or max retries reached, throw the error
+        throw error;
       }
-
-      throw new Error(errorMessage);
     }
 
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      return response.json();
-    }
-
-    return response.text() as unknown as T;
+    throw new Error("Max retries reached");
   }
 
   // Test endpoints
@@ -117,49 +200,35 @@ class ApiClient {
   }
 
   // User endpoints
-  async createOrUpdateUser(
-    data: CreateOrUpdateUserRequest
-  ): Promise<UserResult> {
-    return this.request("/users/create-or-update", {
+  async syncUser(data: SyncUserRequest): Promise<UserResponse> {
+    return this.request("/users/sync", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async getCurrentUser(): Promise<UserResult> {
+  async getCurrentUser(): Promise<UserResponse> {
     return this.request("/users/me");
   }
 
-  async getUserCompanies(): Promise<UserCompany[]> {
-    return this.request("/users/companies");
-  }
-
-  async switchCompany(data: SwitchCompanyRequest): Promise<UserResult> {
-    return this.request("/users/switch-company", {
+  // Organization endpoints
+  async syncOrganization(
+    data: SyncOrganizationRequest
+  ): Promise<OrganizationResponse> {
+    return this.request("/organizations/sync", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  // Company endpoints
-  async createCompany(data: CreateCompanyRequest): Promise<CompanyResult> {
-    return this.request("/companies", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
+  async getCurrentOrganization(): Promise<OrganizationResponse> {
+    return this.request("/organizations/current");
   }
 
-  async getCurrentCompany(): Promise<any> {
-    return this.request("/companies/current");
-  }
-
-  // Products endpoints
-  async getProducts(params?: {
-    page?: number;
-    pageSize?: number;
-    searchTerm?: string;
-    categoryId?: string;
-  }): Promise<any> {
+  // Product endpoints
+  async getProducts(
+    params?: ProductSearchRequest
+  ): Promise<PagedProductResponse> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append("page", params.page.toString());
     if (params?.pageSize)
@@ -168,16 +237,45 @@ class ApiClient {
       searchParams.append("searchTerm", params.searchTerm);
     if (params?.categoryId)
       searchParams.append("categoryId", params.categoryId);
+    if (params?.status) searchParams.append("status", params.status);
 
     const queryString = searchParams.toString();
     return this.request(`/products${queryString ? `?${queryString}` : ""}`);
   }
 
-  async createProduct(data: any): Promise<any> {
+  async createProduct(data: CreateProductRequest): Promise<ProductResponse> {
     return this.request("/products", {
       method: "POST",
       body: JSON.stringify(data),
     });
+  }
+
+  async getProduct(id: string): Promise<ProductResponse> {
+    return this.request(`/products/${id}`);
+  }
+
+  async updateProduct(
+    id: string,
+    data: Partial<CreateProductRequest>
+  ): Promise<ProductResponse> {
+    return this.request(`/products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    return this.request(`/products/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async checkSkuAvailability(
+    sku: string,
+    excludeId?: string
+  ): Promise<{ isAvailable: boolean; sku: string }> {
+    const params = excludeId ? `?excludeId=${excludeId}` : "";
+    return this.request(`/products/check-sku/${sku}${params}`);
   }
 }
 

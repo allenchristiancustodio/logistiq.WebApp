@@ -1,27 +1,27 @@
-// src/hooks/use-api.ts - Updated for Clerk
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
 import {
   apiClient,
   useApiClient,
-  type CreateCompanyRequest,
-  type CreateOrUpdateUserRequest,
-  type SwitchCompanyRequest,
+  type SyncUserRequest,
+  type SyncOrganizationRequest,
+  type CreateProductRequest,
+  type ProductSearchRequest,
 } from "@/lib/api-client";
 
 // Query keys
 export const queryKeys = {
   user: ["user"] as const,
-  userCompanies: ["user", "companies"] as const,
-  currentCompany: ["company", "current"] as const,
-  products: (params?: any) => ["products", params] as const,
+  currentOrganization: ["organization", "current"] as const,
+  products: (params?: ProductSearchRequest) => ["products", params] as const,
+  product: (id: string) => ["product", id] as const,
   ping: ["ping"] as const,
   authTest: ["auth-test"] as const,
 };
 
 // Test hooks
 export const usePing = () => {
-  useApiClient(); // Initialize API client
+  useApiClient();
   return useQuery({
     queryKey: queryKeys.ping,
     queryFn: () => apiClient.ping(),
@@ -30,7 +30,7 @@ export const usePing = () => {
 
 export const useAuthTest = () => {
   const { isSignedIn } = useAuth();
-  useApiClient(); // Initialize API client
+  useApiClient();
 
   return useQuery({
     queryKey: queryKeys.authTest,
@@ -40,13 +40,12 @@ export const useAuthTest = () => {
 };
 
 // User hooks
-export const useCreateOrUpdateUser = () => {
+export const useSyncUser = () => {
   const queryClient = useQueryClient();
-  useApiClient(); // Initialize API client
+  useApiClient();
 
   return useMutation({
-    mutationFn: (data: CreateOrUpdateUserRequest) =>
-      apiClient.createOrUpdateUser(data),
+    mutationFn: (data: SyncUserRequest) => apiClient.syncUser(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.user });
     },
@@ -55,75 +54,48 @@ export const useCreateOrUpdateUser = () => {
 
 export const useCurrentUser = () => {
   const { isSignedIn } = useAuth();
-  useApiClient(); // Initialize API client
+  useApiClient();
 
   return useQuery({
     queryKey: queryKeys.user,
     queryFn: () => apiClient.getCurrentUser(),
     enabled: isSignedIn,
+    retry: false, // Don't retry if user doesn't exist yet
   });
 };
 
-export const useUserCompanies = () => {
-  const { isSignedIn } = useAuth();
-  useApiClient(); // Initialize API client
-
-  return useQuery({
-    queryKey: queryKeys.userCompanies,
-    queryFn: () => apiClient.getUserCompanies(),
-    enabled: isSignedIn,
-  });
-};
-
-export const useSwitchCompany = () => {
+// Organization hooks
+export const useSyncOrganization = () => {
   const queryClient = useQueryClient();
-  useApiClient(); // Initialize API client
+  useApiClient();
 
   return useMutation({
-    mutationFn: (data: SwitchCompanyRequest) => apiClient.switchCompany(data),
+    mutationFn: (data: SyncOrganizationRequest) =>
+      apiClient.syncOrganization(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.user });
-      queryClient.invalidateQueries({ queryKey: queryKeys.userCompanies });
-      queryClient.invalidateQueries({ queryKey: queryKeys.currentCompany });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.currentOrganization,
+      });
     },
   });
 };
 
-// Company hooks
-export const useCreateCompany = () => {
-  const queryClient = useQueryClient();
-  useApiClient(); // Initialize API client
-
-  return useMutation({
-    mutationFn: (data: CreateCompanyRequest) => apiClient.createCompany(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.user });
-      queryClient.invalidateQueries({ queryKey: queryKeys.userCompanies });
-      queryClient.invalidateQueries({ queryKey: queryKeys.currentCompany });
-    },
-  });
-};
-
-export const useCurrentCompany = () => {
+export const useCurrentOrganization = () => {
   const { isSignedIn } = useAuth();
-  useApiClient(); // Initialize API client
+  useApiClient();
 
   return useQuery({
-    queryKey: queryKeys.currentCompany,
-    queryFn: () => apiClient.getCurrentCompany(),
+    queryKey: queryKeys.currentOrganization,
+    queryFn: () => apiClient.getCurrentOrganization(),
     enabled: isSignedIn,
+    retry: false,
   });
 };
 
 // Product hooks
-export const useProducts = (params?: {
-  page?: number;
-  pageSize?: number;
-  searchTerm?: string;
-  categoryId?: string;
-}) => {
+export const useProducts = (params?: ProductSearchRequest) => {
   const { isSignedIn } = useAuth();
-  useApiClient(); // Initialize API client
+  useApiClient();
 
   return useQuery({
     queryKey: queryKeys.products(params),
@@ -132,14 +104,65 @@ export const useProducts = (params?: {
   });
 };
 
+export const useProduct = (id: string) => {
+  const { isSignedIn } = useAuth();
+  useApiClient();
+
+  return useQuery({
+    queryKey: queryKeys.product(id),
+    queryFn: () => apiClient.getProduct(id),
+    enabled: isSignedIn && !!id,
+  });
+};
+
 export const useCreateProduct = () => {
   const queryClient = useQueryClient();
-  useApiClient(); // Initialize API client
+  useApiClient();
 
   return useMutation({
-    mutationFn: (data: any) => apiClient.createProduct(data),
+    mutationFn: (data: CreateProductRequest) => apiClient.createProduct(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
+  });
+};
+
+export const useUpdateProduct = () => {
+  const queryClient = useQueryClient();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<CreateProductRequest>;
+    }) => apiClient.updateProduct(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.product(id) });
+    },
+  });
+};
+
+export const useDeleteProduct = () => {
+  const queryClient = useQueryClient();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (id: string) => apiClient.deleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+};
+
+export const useCheckSkuAvailability = () => {
+  useApiClient();
+
+  return useMutation({
+    mutationFn: ({ sku, excludeId }: { sku: string; excludeId?: string }) =>
+      apiClient.checkSkuAvailability(sku, excludeId),
   });
 };

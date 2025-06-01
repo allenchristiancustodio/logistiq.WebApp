@@ -1,15 +1,17 @@
+// src/App.tsx - Updated for Clerk Organizations
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
-import ClerkProviderWrapper from "@/lib/clerk-provider"; // Changed from kinde-provider
+import ClerkProviderWrapper from "@/lib/clerk-provider";
 import { AuthRouter } from "@/components/auth/auth-router";
 import MainLayout from "@/components/layout/main-layout";
 
 // Pages
 import LoginPage from "@/pages/login";
-import RegisterPage from "@/pages/register"; // New register page
-import OnboardingPage from "@/pages/onboarding";
+import RegisterPage from "@/pages/register";
+import SSOCallbackPage from "@/pages/sso-callback";
+import CreateOrganizationPage from "@/pages/create-organization";
 import DashboardPage from "@/pages/dashboard";
 import ProductsPage from "@/pages/products";
 import InventoryPage from "@/pages/inventory";
@@ -31,7 +33,22 @@ const queryClient = new QueryClient({
         ) {
           return false;
         }
-        return failureCount < 3;
+        // Limit retries to prevent resource exhaustion
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    },
+    mutations: {
+      retry: (failureCount, error: any) => {
+        // Don't retry mutations on auth errors
+        if (
+          error?.message?.includes("401") ||
+          error?.message?.includes("403") ||
+          error?.message?.includes("ERR_INSUFFICIENT_RESOURCES")
+        ) {
+          return false;
+        }
+        return failureCount < 1; // Only retry once for mutations
       },
     },
   },
@@ -47,8 +64,11 @@ function App() {
               {/* Auth Routes */}
               <Route element={<AuthRouter />}>
                 {/* Public Routes */}
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/login/*" element={<LoginPage />} />
+                <Route path="/register/*" element={<RegisterPage />} />
+
+                {/* SSO Callback Route - Required for Clerk OAuth/SSO */}
+                <Route path="/sso-callback" element={<SSOCallbackPage />} />
 
                 {/* Protected Routes with Layout */}
                 <Route element={<MainLayout />}>
@@ -56,7 +76,10 @@ function App() {
                     path="/"
                     element={<Navigate to="/dashboard" replace />}
                   />
-                  <Route path="/onboarding" element={<OnboardingPage />} />
+                  <Route
+                    path="/create-organization"
+                    element={<CreateOrganizationPage />}
+                  />
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/products" element={<ProductsPage />} />
                   <Route path="/inventory" element={<InventoryPage />} />

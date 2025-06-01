@@ -22,6 +22,7 @@ export default function LoginPage() {
           routing="path"
           path="/login"
           signUpUrl="/register"
+          forceRedirectUrl="/dashboard"
           fallbackRedirectUrl="/dashboard"
           appearance={{
             elements: {

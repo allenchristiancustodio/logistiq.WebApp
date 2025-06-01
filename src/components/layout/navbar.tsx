@@ -1,6 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
-import { Bell, Menu, Moon, Settings, Sun, LogOut } from "lucide-react";
+import { useUser, useOrganization } from "@clerk/clerk-react";
+import {
+  Bell,
+  Menu,
+  Moon,
+  Settings,
+  Sun,
+  LogOut,
+  Building2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,18 +19,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/hooks/use-auth"; // Our custom hook
+import { useAuth } from "@/hooks/use-auth";
 import { useUIStore } from "@/stores/ui-store";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const { user: clerkUser } = useUser();
+  const { organization: clerkOrganization } = useOrganization();
   const { user: storeUser, logout } = useAuth();
   const { toggleSidebar, isDarkMode, toggleDarkMode } = useUIStore();
 
   const displayName = storeUser?.fullName || clerkUser?.fullName || "User";
   const email =
     storeUser?.email || clerkUser?.emailAddresses[0]?.emailAddress || "";
+  const organizationName = clerkOrganization?.name || "No Organization";
+
   const initials = displayName
     .split(" ")
     .map((n) => n[0])
@@ -91,6 +102,14 @@ export default function Navbar() {
 
           <hr className="w-0 h-7 border border-solid border-l border-gray-300 mx-3" />
 
+          {/* Current Organization Display */}
+          <div className="flex items-center gap-2 text-sm">
+            <Building2 className="h-4 w-4 text-gray-500" />
+            <span className="text-gray-600 max-w-32 truncate">
+              {organizationName}
+            </span>
+          </div>
+
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -112,11 +131,7 @@ export default function Navbar() {
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{displayName}</p>
                   <p className="text-xs text-muted-foreground">{email}</p>
-                  {storeUser?.currentCompanyName && (
-                    <p className="text-xs text-blue-600">
-                      {storeUser.currentCompanyName}
-                    </p>
-                  )}
+                  <p className="text-xs text-blue-600">{organizationName}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

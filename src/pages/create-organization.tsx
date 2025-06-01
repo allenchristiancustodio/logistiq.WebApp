@@ -1,7 +1,8 @@
-import { SignUp } from "@clerk/clerk-react";
+// src/pages/create-organization.tsx
+import { CreateOrganization } from "@clerk/clerk-react";
 import { Building2 } from "lucide-react";
 
-export default function RegisterPage() {
+export default function CreateOrganizationPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
@@ -12,17 +13,16 @@ export default function RegisterPage() {
             <h1 className="text-4xl font-bold text-gray-900">Logistiq</h1>
           </div>
           <h2 className="text-xl text-gray-600">
-            Create your account and start managing inventory
+            Create your organization to get started
           </h2>
         </div>
 
-        {/* Clerk Sign Up Component */}
-        <SignUp
+        {/* Clerk Create Organization Component */}
+        <CreateOrganization
           routing="path"
-          path="/register"
-          signInUrl="/login"
-          forceRedirectUrl="/dashboard"
-          fallbackRedirectUrl="/dashboard"
+          path="/create-organization"
+          skipInvitationScreen={true}
+          hideSlug={false}
           appearance={{
             elements: {
               formButtonPrimary: "bg-blue-600 hover:bg-blue-700 text-white",
@@ -35,13 +35,7 @@ export default function RegisterPage() {
 
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-600">
-            Already have an account?{" "}
-            <a
-              href="/login"
-              className="text-blue-600 hover:text-blue-500 font-medium"
-            >
-              Sign in here
-            </a>
+            You can manage your organization settings later in your dashboard
           </p>
         </div>
       </div>

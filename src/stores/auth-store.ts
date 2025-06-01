@@ -1,39 +1,50 @@
+// src/stores/auth-store.ts - Simplified for Clerk
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export interface User {
   id: string;
+  clerkUserId: string;
   email: string;
+  firstName: string;
+  lastName: string;
   fullName: string;
-  hasActiveCompany: boolean;
-  currentCompanyId?: string;
-  currentCompanyName?: string;
+  currentOrganizationId?: string;
+  phone?: string;
+  imageUrl?: string;
+  isActive: boolean;
 }
 
-export interface Company {
+export interface Organization {
   id: string;
+  clerkOrganizationId: string;
   name: string;
-  role: string;
+  slug?: string;
+  description?: string;
+  imageUrl?: string;
+  industry?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
   isActive: boolean;
-  joinedAt: string;
+  createdAt: string;
 }
 
 interface AuthState {
-  // Company-specific state (Clerk handles user state)
+  // Synced user data from backend
   user: User | null;
-  companies: Company[];
-  hasActiveCompany: boolean;
-  currentCompanyId?: string;
-  currentCompanyName?: string;
+  organization: Organization | null;
 
   // Actions
-  setUser: (user: User) => void;
-  updateUserCompany: (companyId?: string, companyName?: string) => void;
-  setCompanies: (companies: Company[]) => void;
-  clearCompanyData: () => void;
+  setUser: (user: User | null) => void;
+  setOrganization: (organization: Organization | null) => void;
+  clearData: () => void;
 
   // Helper getters
-  needsOnboarding: () => boolean;
+  isUserSynced: () => boolean;
+  isOrganizationSynced: () => boolean;
+  hasCompleteSetup: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -41,65 +52,44 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       // Initial state
       user: null,
-      companies: [],
-      hasActiveCompany: false,
-      currentCompanyId: undefined,
-      currentCompanyName: undefined,
+      organization: null,
 
       // Actions
-      setUser: (user: User) => {
-        console.log("🔄 Setting user in store:", user.email);
-        set({
-          user,
-          hasActiveCompany: user.hasActiveCompany,
-          currentCompanyId: user.currentCompanyId,
-          currentCompanyName: user.currentCompanyName,
-        });
+      setUser: (user: User | null) => {
+        console.log("Setting user in store:", user?.email);
+        set({ user });
       },
 
-      updateUserCompany: (companyId?: string, companyName?: string) => {
-        const currentUser = get().user;
-        if (currentUser) {
-          console.log("🔄 Updating user company:", { companyId, companyName });
-          const updatedUser = {
-            ...currentUser,
-            currentCompanyId: companyId,
-            currentCompanyName: companyName,
-            hasActiveCompany: !!companyId,
-          };
-          set({
-            user: updatedUser,
-            hasActiveCompany: !!companyId,
-            currentCompanyId: companyId,
-            currentCompanyName: companyName,
-          });
-        }
+      setOrganization: (organization: Organization | null) => {
+        console.log("Setting organization in store:", organization?.name);
+        set({ organization });
       },
 
-      setCompanies: (companies: Company[]) => {
-        set({ companies });
-      },
-
-      clearCompanyData: () => {
-        console.log("🧹 Clearing company data");
+      clearData: () => {
+        console.log("Clearing auth data");
         set({
           user: null,
-          companies: [],
-          hasActiveCompany: false,
-          currentCompanyId: undefined,
-          currentCompanyName: undefined,
+          organization: null,
         });
       },
 
       // Helper getters
-      needsOnboarding: () => {
-        const user = get().user;
-        return user ? !user.hasActiveCompany : false;
+      isUserSynced: () => {
+        return !!get().user;
+      },
+
+      isOrganizationSynced: () => {
+        return !!get().organization;
+      },
+
+      hasCompleteSetup: () => {
+        const { user, organization } = get();
+        return !!user && !!organization;
       },
     }),
     {
-      name: "logistiq-auth-v2", // Changed name to reset old Kinde data
-      version: 2, // Increment version to clear old data
+      name: "logistiq-auth-clerk", // New name to reset old data
+      version: 3, // Increment to clear old data
     }
   )
 );
