@@ -1,4 +1,4 @@
-// src/components/auth/auth-router.tsx - Updated for Clerk organizations
+// src/components/auth/auth-router.tsx - Fixed timing issue
 import { useEffect, useState } from "react";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import {
@@ -15,10 +15,11 @@ const PUBLIC_ROUTES = ["/login", "/register", "/sso-callback"];
 
 export function AuthRouter() {
   const location = useLocation();
-  const { isSignedIn, isLoaded } = useClerkAuth();
+  const { isSignedIn, isLoaded, getToken } = useClerkAuth();
   const { user: clerkUser } = useUser();
   const { organization: clerkOrganization } = useOrganization();
   const [isInitializing, setIsInitializing] = useState(false);
+  const [syncAttempts, setSyncAttempts] = useState(0);
 
   const {
     user: storeUser,
@@ -54,7 +55,8 @@ export function AuthRouter() {
 
       // Check if we need to sync anything
       const needsUserSync = !storeUser;
-      const needsOrgSync = clerkOrganization && !storeOrganization;
+      const needsOrgSync =
+        clerkOrganization && !storeOrganization && syncAttempts < 3;
 
       if (!needsUserSync && !needsOrgSync) {
         return; // Nothing to sync
@@ -89,18 +91,46 @@ export function AuthRouter() {
             clerkOrganization.name
           );
 
-          const orgResult = await syncOrganizationMutation.mutateAsync({
-            name: clerkOrganization.name,
-            slug: clerkOrganization.slug || undefined,
-            imageUrl: clerkOrganization.imageUrl || undefined,
-          });
+          try {
+            // Get a fresh token to ensure it has org claims
+            const token = await getToken({ template: "logistiq-backend" });
+            console.log("🔑 Got fresh token for org sync");
 
-          console.log("✅ Organization synced:", orgResult);
-          setOrganization(orgResult);
+            const orgResult = await syncOrganizationMutation.mutateAsync({
+              name: clerkOrganization.name,
+              slug: clerkOrganization.slug || undefined,
+              imageUrl: clerkOrganization.imageUrl || undefined,
+            });
+
+            console.log("✅ Organization synced:", orgResult);
+            setOrganization(orgResult);
+            setSyncAttempts(0); // Reset attempts on success
+          } catch (orgError: any) {
+            console.warn("⚠️ Organization sync failed:", orgError.message);
+            setSyncAttempts((prev) => prev + 1);
+
+            // If it's the "No organization context found" error, wait and retry
+            if (
+              orgError.message.includes("No organization context found") &&
+              syncAttempts < 2
+            ) {
+              console.log("⏳ Waiting for JWT to refresh, will retry...");
+              setTimeout(() => {
+                setIsInitializing(false);
+              }, 2000); // Retry after 2 seconds
+              return;
+            } else {
+              throw orgError; // Re-throw other errors
+            }
+          }
         }
       } catch (error: any) {
         console.error("❌ Failed to sync data:", error);
-        // Don't block the UI, user can try again
+        // Don't block the UI for organization sync errors
+        if (!error.message.includes("No organization context found")) {
+          // Re-throw for other errors
+          throw error;
+        }
       } finally {
         setIsInitializing(false);
       }
@@ -114,6 +144,7 @@ export function AuthRouter() {
     clerkOrganization?.id, // Only re-run if org ID changes
     storeUser?.id, // Only re-run if store user changes
     storeOrganization?.id, // Only re-run if store org changes
+    syncAttempts, // Re-run when sync attempts change
   ]);
 
   // Show loading spinner
@@ -123,7 +154,11 @@ export function AuthRouter() {
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600">
-            {!isLoaded ? "Loading..." : "Setting up your account..."}
+            {!isLoaded
+              ? "Loading..."
+              : syncAttempts > 0
+              ? "Syncing organization..."
+              : "Setting up your account..."}
           </p>
         </div>
       </div>
@@ -161,18 +196,23 @@ export function AuthRouter() {
     return <Navigate to="/create-organization" replace />;
   }
 
-  // Wait for backend data to be synced
-  if (!storeUser || !storeOrganization) {
+  // Wait for backend data to be synced (but allow proceeding without organization sync after attempts)
+  if (!storeUser || (!storeOrganization && syncAttempts < 3)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading your workspace...</p>
+          {syncAttempts > 0 && (
+            <p className="text-sm text-gray-500 mt-2">
+              Syncing organization data... (attempt {syncAttempts}/3)
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
-  // All checks passed!
+  // All checks passed! (or we've exhausted sync attempts and can proceed)
   return <Outlet />;
 }
