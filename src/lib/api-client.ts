@@ -633,7 +633,6 @@ class ApiClient {
     });
   }
 
-
   async createCheckoutSession(data: {
     priceId: string;
     customerId?: string;
@@ -654,7 +653,7 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
-  
+
   async createPortalSession(data: {
     customerId: string;
     returnUrl: string;
@@ -666,7 +665,7 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
-  
+
   async createStripeCustomer(data: {
     email: string;
     name: string;
@@ -682,22 +681,24 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
-  
-  async getStripePrices(): Promise<Array<{
-    id: string;
-    productId: string;
-    productName: string;
-    productDescription: string;
-    unitAmount: number;
-    currency: string;
-    interval: string;
-    intervalCount: number;
-    isActive: boolean;
-    metadata?: Record<string, string>;
-  }>> {
+
+  async getStripePrices(): Promise<
+    Array<{
+      id: string;
+      productId: string;
+      productName: string;
+      productDescription: string;
+      unitAmount: number;
+      currency: string;
+      interval: string;
+      intervalCount: number;
+      isActive: boolean;
+      metadata?: Record<string, string>;
+    }>
+  > {
     return this.request("/payments/prices");
   }
-  
+
   async getStripeSubscription(subscriptionId: string): Promise<{
     id: string;
     customerId: string;
@@ -717,8 +718,11 @@ class ApiClient {
   }> {
     return this.request(`/payments/subscription/${subscriptionId}`);
   }
-  
-  async cancelStripeSubscription(subscriptionId: string, immediately: boolean = false): Promise<{
+
+  async cancelStripeSubscription(
+    subscriptionId: string,
+    immediately: boolean = false
+  ): Promise<{
     id: string;
     status: string;
   }> {
@@ -727,12 +731,15 @@ class ApiClient {
       body: JSON.stringify({ immediately }),
     });
   }
-  
-  async updateStripeSubscription(subscriptionId: string, data: {
-    priceId?: string;
-    prorationBehavior?: boolean;
-    metadata?: Record<string, string>;
-  }): Promise<{
+
+  async updateStripeSubscription(
+    subscriptionId: string,
+    data: {
+      priceId?: string;
+      prorationBehavior?: boolean;
+      metadata?: Record<string, string>;
+    }
+  ): Promise<{
     id: string;
     status: string;
   }> {
@@ -740,6 +747,43 @@ class ApiClient {
       method: "PUT",
       body: JSON.stringify(data),
     });
+  }
+
+  // Plan Management endpoints
+  async changePlan(data: {
+    newPlanId: string;
+    effectiveDate?: string;
+    prorationBehavior?: string;
+  }): Promise<SubscriptionResponse> {
+    return this.request("/subscriptions/change-plan", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async upgradeToProPlan(
+    isAnnual: boolean = false
+  ): Promise<SubscriptionResponse> {
+    return this.request("/subscriptions/upgrade-to-pro", {
+      method: "POST",
+      body: JSON.stringify({ isAnnual }),
+    });
+  }
+
+  async downgradeToStarter(): Promise<SubscriptionResponse> {
+    return this.request("/subscriptions/downgrade-to-starter", {
+      method: "POST",
+    });
+  }
+
+  async canChangeToPlan(
+    planId: string
+  ): Promise<{ canChange: boolean; planId: string }> {
+    return this.request(`/subscriptions/can-change-to/${planId}`);
+  }
+
+  async getUpgradeRecommendations(): Promise<string[]> {
+    return this.request("/subscriptions/upgrade-recommendations");
   }
 }
 

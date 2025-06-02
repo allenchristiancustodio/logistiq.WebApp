@@ -677,3 +677,93 @@ export const useClearOrganizationCache = () => {
     console.log("🧹 Cleared organization-specific cache");
   };
 };
+
+// Plan Management hooks
+export const useChangePlan = () => {
+  const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      newPlanId: string;
+      effectiveDate?: string;
+      prorationBehavior?: string;
+    }) => apiClient.changePlan(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: subscriptionQueryKeys.subscription(orgId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: subscriptionQueryKeys.limits(orgId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: subscriptionQueryKeys.usage(orgId),
+      });
+    },
+  });
+};
+
+export const useUpgradeToProPlan = () => {
+  const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (isAnnual: boolean = false) =>
+      apiClient.upgradeToProPlan(isAnnual),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: subscriptionQueryKeys.subscription(orgId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: subscriptionQueryKeys.limits(orgId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: subscriptionQueryKeys.usage(orgId),
+      });
+    },
+  });
+};
+
+export const useDowngradeToStarter = () => {
+  const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: () => apiClient.downgradeToStarter(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: subscriptionQueryKeys.subscription(orgId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: subscriptionQueryKeys.limits(orgId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: subscriptionQueryKeys.usage(orgId),
+      });
+    },
+  });
+};
+
+export const useCanChangeToPlan = () => {
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (planId: string) => apiClient.canChangeToPlan(planId),
+  });
+};
+
+export const useUpgradeRecommendations = () => {
+  const { isSignedIn } = useAuth();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useQuery({
+    queryKey: ["subscription", "upgrade-recommendations", orgId],
+    queryFn: () => apiClient.getUpgradeRecommendations(),
+    enabled: isSignedIn && !!orgId,
+    staleTime: 1000 * 60 * 15, // 15 minutes
+  });
+};
