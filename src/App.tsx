@@ -1,4 +1,4 @@
-// src/App.tsx - Updated for Modal Organization Creation
+// src/App.tsx - Updated to include subscription route
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
@@ -19,6 +19,7 @@ import SettingsPage from "@/pages/settings";
 import ExpensesPage from "@/pages/expenses";
 import OrganizationSettingsPage from "@/pages/organization-settings";
 import CategoriesPage from "./pages/categories";
+import SubscriptionPage from "./pages/subscription"; // Add this import
 
 // Create a client
 const queryClient = new QueryClient({
@@ -82,6 +83,7 @@ function App() {
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/expenses" element={<ExpensesPage />} />
                   <Route path="/categories" element={<CategoriesPage />} />
+                  <Route path="/subscription" element={<SubscriptionPage />} />
                   <Route
                     path="/organization-settings"
                     element={<OrganizationSettingsPage />}

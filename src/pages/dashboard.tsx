@@ -1,6 +1,7 @@
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, ShoppingCart, Users, TrendingUp } from "lucide-react";
+import { SubscriptionDashboardWidget } from "@/components/subscription/subscription-dashboard-widget";
 
 export default function DashboardPage() {
   return (
@@ -61,8 +62,12 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Dashboard Content */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Subscription Widget */}
+        <SubscriptionDashboardWidget />
+
+        {/* Quick Actions */}
         <Card>
           <CardHeader>
             <CardTitle>Quick Start</CardTitle>
@@ -82,6 +87,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Recent Activity */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>

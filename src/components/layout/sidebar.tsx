@@ -3,6 +3,7 @@ import {
   Archive,
   CircleDollarSign,
   Clipboard,
+  Crown,
   Folder,
   Layout,
   Menu,
@@ -131,6 +132,13 @@ export default function Sidebar() {
           href="/settings"
           icon={SlidersHorizontal}
           label="Settings"
+          isCollapsed={isSidebarCollapsed}
+        />
+
+        <SidebarLink
+          href="/subscription"
+          icon={Crown}
+          label="Subscription"
           isCollapsed={isSidebarCollapsed}
         />
         <SidebarLink

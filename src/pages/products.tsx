@@ -76,9 +76,9 @@ const UNITS = [
   { value: "meters", label: "Meters" },
 ];
 
-const { checkLimit } = useSubscriptionLimitCheck();
-
 export default function ProductsPage() {
+  const { checkLimit } = useSubscriptionLimitCheck();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -338,7 +338,7 @@ export default function ProductsPage() {
               </div>
 
               {/* Subscription Limit Warning */}
-              {/* {(() => {
+              {(() => {
                 const limitCheck = checkLimit("products");
                 return (
                   (limitCheck.isNearLimit || limitCheck.needsUpgrade) && (
@@ -348,7 +348,7 @@ export default function ProductsPage() {
                     />
                   )
                 );
-              })()} */}
+              })()}
 
               {/* Category Filter */}
               <div className="flex gap-4">
