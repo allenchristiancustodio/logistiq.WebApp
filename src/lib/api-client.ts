@@ -2,6 +2,95 @@ import { useAuth } from "@clerk/clerk-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
+export interface SubscriptionResponse {
+  id: string;
+  clerkOrganizationId: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  planName: string;
+  monthlyPrice: number;
+  status: string;
+  startDate: string;
+  endDate: string;
+  trialEndDate?: string;
+  isTrialActive: boolean;
+  daysRemaining: number;
+  isExpired: boolean;
+  maxUsers: number;
+  maxProducts: number;
+  maxOrders: number;
+  maxWarehouses: number;
+  hasAdvancedReporting: boolean;
+  hasReporting: boolean;
+  hasInvoicing: boolean;
+  currentUsers: number;
+  currentProducts: number;
+  currentOrders: number;
+  currentWarehouses: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface SubscriptionPlanResponse {
+  id: string;
+  name: string;
+  description: string;
+  monthlyPrice: number;
+  annualPrice: number;
+  isPopular?: boolean;
+  features: string[];
+  maxUsers: number;
+  maxProducts: number;
+  maxOrders: number;
+  maxWarehouses: number;
+  hasAdvancedReporting: boolean;
+  hasReporting: boolean;
+  hasInvoicing: boolean;
+  stripePriceIdMonthly: string;
+  stripePriceIdAnnual: string;
+}
+
+export interface SubscriptionUsageResponse {
+  currentUsers: number;
+  currentProducts: number;
+  currentOrders: number;
+  currentWarehouses: number;
+  limits: {
+    maxUsers: number;
+    maxProducts: number;
+    maxOrders: number;
+    maxWarehouses: number;
+    hasAdvancedReporting: boolean;
+    hasReporting: boolean;
+    hasInvoicing: boolean;
+  };
+  usageMetrics: Record<
+    string,
+    {
+      current: number;
+      limit: number;
+      percentageUsed: number;
+      isAtLimit: boolean;
+      isNearLimit: boolean;
+    }
+  >;
+}
+
+export interface CreateTrialSubscriptionRequest {
+  planName?: string;
+  trialDays?: number;
+}
+
+export interface CreatePaidSubscriptionRequest {
+  planName: string;
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
+  stripePriceId: string;
+  monthlyPrice: number;
+  trialEndDate?: string;
+}
+
 // Updated DTOs to match backend
 export interface SyncUserRequest {
   email: string;
@@ -447,6 +536,210 @@ class ApiClient {
 
   async getCategoryHierarchy(): Promise<CategoryResponse[]> {
     return this.request("/categories/hierarchy");
+  }
+
+  // Subscription endpoints
+
+  async getCurrentSubscription(): Promise<SubscriptionResponse> {
+    return this.request("/subscriptions/current");
+  }
+
+  async getAvailablePlans(): Promise<SubscriptionPlanResponse[]> {
+    return this.request("/subscriptions/plans");
+  }
+
+  async getSubscriptionLimits(): Promise<{
+    maxUsers: number;
+    maxProducts: number;
+    maxOrders: number;
+    maxWarehouses: number;
+    hasAdvancedReporting: boolean;
+    hasReporting: boolean;
+    hasInvoicing: boolean;
+  }> {
+    return this.request("/subscriptions/limits");
+  }
+
+  async getSubscriptionUsage(): Promise<SubscriptionUsageResponse> {
+    return this.request("/subscriptions/usage");
+  }
+
+  async createTrialSubscription(
+    data: CreateTrialSubscriptionRequest
+  ): Promise<SubscriptionResponse> {
+    return this.request("/subscriptions/trial", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async createPaidSubscription(
+    data: CreatePaidSubscriptionRequest
+  ): Promise<SubscriptionResponse> {
+    return this.request("/subscriptions/paid", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSubscription(
+    id: string,
+    data: {
+      planName?: string;
+      monthlyPrice?: number;
+      status?: string;
+      endDate?: string;
+      maxUsers?: number;
+      maxProducts?: number;
+      maxOrders?: number;
+      maxWarehouses?: number;
+      hasAdvancedReporting?: boolean;
+      hasReporting?: boolean;
+      hasInvoicing?: boolean;
+    }
+  ): Promise<SubscriptionResponse> {
+    return this.request(`/subscriptions/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async cancelSubscription(
+    id: string,
+    data: {
+      cancellationReason?: string;
+      cancelImmediately?: boolean;
+    }
+  ): Promise<void> {
+    return this.request(`/subscriptions/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async reactivateSubscription(id: string): Promise<SubscriptionResponse> {
+    return this.request(`/subscriptions/${id}/reactivate`, {
+      method: "POST",
+    });
+  }
+
+  async checkLimit(
+    limitType: string,
+    currentCount: number
+  ): Promise<{ canAdd: boolean; limitType: string }> {
+    return this.request("/subscriptions/check-limit", {
+      method: "POST",
+      body: JSON.stringify({ limitType, currentCount }),
+    });
+  }
+
+
+  async createCheckoutSession(data: {
+    priceId: string;
+    customerId?: string;
+    customerEmail: string;
+    customerName: string;
+    organizationName: string;
+    successUrl: string;
+    cancelUrl: string;
+    isAnnual?: boolean;
+    trialDays?: number;
+  }): Promise<{
+    sessionId: string;
+    sessionUrl: string;
+    customerId: string;
+  }> {
+    return this.request("/payments/create-checkout-session", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+  
+  async createPortalSession(data: {
+    customerId: string;
+    returnUrl: string;
+  }): Promise<{
+    sessionUrl: string;
+  }> {
+    return this.request("/payments/create-portal-session", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+  
+  async createStripeCustomer(data: {
+    email: string;
+    name: string;
+    organizationName: string;
+    metadata?: Record<string, string>;
+  }): Promise<{
+    customerId: string;
+    email: string;
+    name: string;
+  }> {
+    return this.request("/payments/create-customer", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+  
+  async getStripePrices(): Promise<Array<{
+    id: string;
+    productId: string;
+    productName: string;
+    productDescription: string;
+    unitAmount: number;
+    currency: string;
+    interval: string;
+    intervalCount: number;
+    isActive: boolean;
+    metadata?: Record<string, string>;
+  }>> {
+    return this.request("/payments/prices");
+  }
+  
+  async getStripeSubscription(subscriptionId: string): Promise<{
+    id: string;
+    customerId: string;
+    status: string;
+    priceId: string;
+    amount: number;
+    currency: string;
+    interval: string;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    trialStart?: string;
+    trialEnd?: string;
+    cancelAt?: string;
+    canceledAt?: string;
+    createdAt: string;
+    metadata?: Record<string, string>;
+  }> {
+    return this.request(`/payments/subscription/${subscriptionId}`);
+  }
+  
+  async cancelStripeSubscription(subscriptionId: string, immediately: boolean = false): Promise<{
+    id: string;
+    status: string;
+  }> {
+    return this.request(`/payments/subscription/${subscriptionId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ immediately }),
+    });
+  }
+  
+  async updateStripeSubscription(subscriptionId: string, data: {
+    priceId?: string;
+    prorationBehavior?: boolean;
+    metadata?: Record<string, string>;
+  }): Promise<{
+    id: string;
+    status: string;
+  }> {
+    return this.request(`/payments/subscription/${subscriptionId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   }
 }
 

@@ -17,6 +17,10 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  SubscriptionLimitWarning,
+  useSubscriptionLimitCheck,
+} from "@/components/subscription/subscription-limit-warning";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -71,6 +75,8 @@ const UNITS = [
   { value: "liters", label: "Liters" },
   { value: "meters", label: "Meters" },
 ];
+
+const { checkLimit } = useSubscriptionLimitCheck();
 
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -136,6 +142,23 @@ export default function ProductsPage() {
   };
 
   const openCreateModal = () => {
+    const limitCheck = checkLimit("products");
+    if (!limitCheck.canAdd) {
+      toast.error(
+        `You've reached your product limit of ${limitCheck.limit}. Please upgrade your plan to add more products.`
+      );
+      return;
+    }
+
+    if (limitCheck.isNearLimit) {
+      toast.warning(
+        `You're using ${limitCheck.current} of ${
+          limitCheck.limit
+        } products (${Math.round(
+          limitCheck.percentageUsed
+        )}%). Consider upgrading soon.`
+      );
+    }
     setFormData({
       name: "",
       description: "",
@@ -313,6 +336,19 @@ export default function ProductsPage() {
                   Clear
                 </Button>
               </div>
+
+              {/* Subscription Limit Warning */}
+              {/* {(() => {
+                const limitCheck = checkLimit("products");
+                return (
+                  (limitCheck.isNearLimit || limitCheck.needsUpgrade) && (
+                    <SubscriptionLimitWarning
+                      limitType="products"
+                      className="mb-6"
+                    />
+                  )
+                );
+              })()} */}
 
               {/* Category Filter */}
               <div className="flex gap-4">
