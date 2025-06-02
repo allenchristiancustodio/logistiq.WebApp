@@ -1,10 +1,15 @@
+import { PageWrapper } from "@/components/layout/page-wrapper";
+
 export default function SettingsPage() {
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-      <p className="text-gray-600 mt-1">
-        Configure your account and preferences
-      </p>
-    </div>
+    <PageWrapper
+      title="Settings"
+      description="Configure your account and preferences"
+    >
+      {/* Settings content will go here */}
+      <div className="text-center py-12 text-gray-500">
+        Settings page coming soon
+      </div>
+    </PageWrapper>
   );
 }

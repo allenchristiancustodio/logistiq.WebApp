@@ -1,8 +1,10 @@
-// src/pages/products.tsx - Updated with API integration
 import { useState } from "react";
 import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageWrapper } from "@/components/layout/page-wrapper";
+import { LoadingScreen } from "@/components/ui/loading-screen";
+import { ErrorMessage } from "@/components/ui/error-message";
 import {
   Card,
   CardContent,
@@ -31,6 +33,7 @@ export default function ProductsPage() {
     data: productsData,
     isLoading,
     error,
+    refetch,
   } = useProducts({
     page: currentPage,
     pageSize,
@@ -39,7 +42,7 @@ export default function ProductsPage() {
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
   };
 
   const getStatusColor = (status: string) => {
@@ -64,41 +67,35 @@ export default function ProductsPage() {
     }).format(amount);
   };
 
+  // Loading state
+  if (isLoading) {
+    return <LoadingScreen message="Loading products..." />;
+  }
+
+  // Error state
   if (error) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-600 mt-1">Manage your product inventory</p>
-        </div>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center text-red-600">
-              <p>Error loading products: {error.message}</p>
-              <p className="text-sm text-gray-500 mt-2">
-                Make sure your API is running and you're authenticated.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <PageWrapper title="Products" description="Manage your product inventory">
+        <ErrorMessage
+          title="Failed to load products"
+          message="There was an error loading your products. Please try again."
+          onRetry={() => refetch()}
+        />
+      </PageWrapper>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-600 mt-1">Manage your product inventory</p>
-        </div>
+    <PageWrapper
+      title="Products"
+      description="Manage your product inventory"
+      action={
         <Button>
           <Plus className="w-4 h-4 mr-2" />
           Add Product
         </Button>
-      </div>
-
+      }
+    >
       {/* Search and Filters */}
       <Card>
         <CardHeader>
@@ -139,11 +136,7 @@ export default function ProductsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-gray-500">Loading products...</div>
-            </div>
-          ) : !productsData?.products || productsData.products.length === 0 ? (
+          {!productsData?.products || productsData.products.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500">No products found</p>
               {searchTerm && (
@@ -248,6 +241,6 @@ export default function ProductsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageWrapper>
   );
 }

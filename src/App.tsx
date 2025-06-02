@@ -1,4 +1,4 @@
-// src/App.tsx - Updated for Clerk Organizations
+// src/App.tsx - Updated for Modal Organization Creation
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
@@ -11,14 +11,13 @@ import MainLayout from "@/components/layout/main-layout";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import SSOCallbackPage from "@/pages/sso-callback";
-import CreateOrganizationPage from "@/pages/create-organization";
 import DashboardPage from "@/pages/dashboard";
 import ProductsPage from "@/pages/products";
 import InventoryPage from "@/pages/inventory";
 import UsersPage from "@/pages/userpage";
 import SettingsPage from "@/pages/settings";
 import ExpensesPage from "@/pages/expenses";
-import OnboardingPage from "./pages/onboarding";
+import OrganizationSettingsPage from "@/pages/organization-settings";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -75,17 +74,16 @@ function App() {
                     path="/"
                     element={<Navigate to="/dashboard" replace />}
                   />
-                  <Route
-                    path="/create-organization"
-                    element={<CreateOrganizationPage />}
-                  />
-                  <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/products" element={<ProductsPage />} />
                   <Route path="/inventory" element={<InventoryPage />} />
                   <Route path="/users" element={<UsersPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/expenses" element={<ExpensesPage />} />
+                  <Route
+                    path="/organization-settings"
+                    element={<OrganizationSettingsPage />}
+                  />
                 </Route>
               </Route>
             </Routes>

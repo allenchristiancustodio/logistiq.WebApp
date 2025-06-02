@@ -68,11 +68,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       clearData: () => {
-        console.log("Clearing auth data");
+        console.log("Clearing auth data (org switch or logout)");
         set({
           user: null,
           organization: null,
         });
+      },
+
+      clearOrganizationData: () => {
+        console.log("Clearing organization data for org switch");
+        set({ organization: null });
       },
 
       // Helper getters

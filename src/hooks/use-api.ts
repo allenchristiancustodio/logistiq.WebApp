@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useOrganization } from "@clerk/clerk-react";
 import {
   apiClient,
   useApiClient,
@@ -14,17 +14,25 @@ import {
 } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
 
-// Query keys
+// Query keys now include organization ID for proper cache isolation
 export const queryKeys = {
   user: ["user"] as const,
-  currentOrganization: ["organization", "current"] as const,
-  products: (params?: ProductSearchRequest) => ["products", params] as const,
-  product: (id: string) => ["product", id] as const,
+  currentOrganization: (orgId?: string) =>
+    ["organization", "current", orgId] as const,
+  products: (orgId?: string, params?: ProductSearchRequest) =>
+    ["products", orgId, params] as const,
+  product: (orgId?: string, id?: string) => ["product", orgId, id] as const,
   ping: ["ping"] as const,
   authTest: ["auth-test"] as const,
 };
 
-// Test hooks
+// Helper hook to get current organization ID
+const useCurrentOrgId = () => {
+  const { organization } = useOrganization();
+  return organization?.id;
+};
+
+// Test hooks (unchanged)
 export const usePing = () => {
   useApiClient();
   return useQuery({
@@ -65,11 +73,8 @@ export const useCompleteUserOnboarding = () => {
     mutationFn: (data: CompleteUserOnboardingRequest) =>
       apiClient.completeUserOnboarding(data),
     onSuccess: (user) => {
-      // Update store immediately
       const { setUser } = useAuthStore.getState();
       setUser(user);
-
-      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: queryKeys.user });
     },
   });
@@ -96,21 +101,23 @@ export const useCurrentUser = () => {
     queryKey: queryKeys.user,
     queryFn: () => apiClient.getCurrentUser(),
     enabled: isSignedIn,
-    retry: false, // Don't retry if user doesn't exist yet
+    retry: false,
   });
 };
 
-// Organization hooks
+// Organization hooks with cache isolation
 export const useSyncOrganization = () => {
   const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useMutation({
     mutationFn: (data: SyncOrganizationRequest) =>
       apiClient.syncOrganization(data),
     onSuccess: () => {
+      // Invalidate for current organization
       queryClient.invalidateQueries({
-        queryKey: queryKeys.currentOrganization,
+        queryKey: queryKeys.currentOrganization(orgId),
       });
     },
   });
@@ -118,19 +125,18 @@ export const useSyncOrganization = () => {
 
 export const useCompleteOrganizationSetup = () => {
   const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useMutation({
     mutationFn: (data: CompleteOrganizationSetupRequest) =>
       apiClient.completeOrganizationSetup(data),
     onSuccess: (organization) => {
-      // Update store immediately
       const { setOrganization } = useAuthStore.getState();
       setOrganization(organization);
 
-      // Invalidate queries
       queryClient.invalidateQueries({
-        queryKey: queryKeys.currentOrganization,
+        queryKey: queryKeys.currentOrganization(orgId),
       });
     },
   });
@@ -138,6 +144,7 @@ export const useCompleteOrganizationSetup = () => {
 
 export const useUpdateOrganization = () => {
   const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useMutation({
@@ -145,7 +152,7 @@ export const useUpdateOrganization = () => {
       apiClient.updateOrganization(data),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.currentOrganization,
+        queryKey: queryKeys.currentOrganization(orgId),
       });
     },
   });
@@ -153,53 +160,61 @@ export const useUpdateOrganization = () => {
 
 export const useCurrentOrganization = () => {
   const { isSignedIn } = useAuth();
+  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useQuery({
-    queryKey: queryKeys.currentOrganization,
+    queryKey: queryKeys.currentOrganization(orgId),
     queryFn: () => apiClient.getCurrentOrganization(),
-    enabled: isSignedIn,
+    enabled: isSignedIn && !!orgId,
     retry: false,
   });
 };
 
-// Product hooks
+// Product hooks with organization-specific caching
 export const useProducts = (params?: ProductSearchRequest) => {
   const { isSignedIn } = useAuth();
+  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useQuery({
-    queryKey: queryKeys.products(params),
+    queryKey: queryKeys.products(orgId, params),
     queryFn: () => apiClient.getProducts(params),
-    enabled: isSignedIn,
+    enabled: isSignedIn && !!orgId,
   });
 };
 
 export const useProduct = (id: string) => {
   const { isSignedIn } = useAuth();
+  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useQuery({
-    queryKey: queryKeys.product(id),
+    queryKey: queryKeys.product(orgId, id),
     queryFn: () => apiClient.getProduct(id),
-    enabled: isSignedIn && !!id,
+    enabled: isSignedIn && !!id && !!orgId,
   });
 };
 
 export const useCreateProduct = () => {
   const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useMutation({
     mutationFn: (data: CreateProductRequest) => apiClient.createProduct(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      // Invalidate products for current organization only
+      queryClient.invalidateQueries({
+        queryKey: ["products", orgId],
+      });
     },
   });
 };
 
 export const useUpdateProduct = () => {
   const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useMutation({
@@ -211,20 +226,27 @@ export const useUpdateProduct = () => {
       data: Partial<CreateProductRequest>;
     }) => apiClient.updateProduct(id, data),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.product(id) });
+      queryClient.invalidateQueries({
+        queryKey: ["products", orgId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.product(orgId, id),
+      });
     },
   });
 };
 
 export const useDeleteProduct = () => {
   const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useMutation({
     mutationFn: (id: string) => apiClient.deleteProduct(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({
+        queryKey: ["products", orgId],
+      });
     },
   });
 };
@@ -236,4 +258,20 @@ export const useCheckSkuAvailability = () => {
     mutationFn: ({ sku, excludeId }: { sku: string; excludeId?: string }) =>
       apiClient.checkSkuAvailability(sku, excludeId),
   });
+};
+
+// Utility hook to clear all organization-specific cache when switching orgs
+export const useClearOrganizationCache = () => {
+  const queryClient = useQueryClient();
+
+  return () => {
+    // Clear all organization-specific queries
+    queryClient.removeQueries({ queryKey: ["products"] });
+    queryClient.removeQueries({ queryKey: ["organization"] });
+    queryClient.removeQueries({ queryKey: ["orders"] });
+    queryClient.removeQueries({ queryKey: ["customers"] });
+    // Add more as you build features
+
+    console.log("🧹 Cleared organization-specific cache");
+  };
 };

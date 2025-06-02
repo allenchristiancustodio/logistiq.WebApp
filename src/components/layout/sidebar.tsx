@@ -1,6 +1,4 @@
-// src/components/layout/sidebar.tsx - Updated without company switching
 import { NavLink, useLocation } from "react-router-dom";
-import { useOrganization } from "@clerk/clerk-react";
 import {
   Archive,
   CircleDollarSign,
@@ -9,11 +7,11 @@ import {
   Menu,
   SlidersHorizontal,
   User,
-  Building2,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/stores/ui-store";
+import { OrganizationSwitcher } from "../organization/organization-swticher";
 
 interface SidebarLinkProps {
   href: string;
@@ -57,7 +55,6 @@ function SidebarLink({
 
 export default function Sidebar() {
   const { isSidebarCollapsed, toggleSidebar } = useUIStore();
-  const { organization } = useOrganization();
 
   const sidebarClassNames = `fixed flex flex-col ${
     isSidebarCollapsed ? "w-0 md:w-16" : "w-72 md:w-64"
@@ -89,20 +86,10 @@ export default function Sidebar() {
         </Button>
       </div>
 
-      {/* ORGANIZATION INFO */}
-      {!isSidebarCollapsed && organization && (
-        <div className="mt-6 px-4 py-3">
-          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-            <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {organization.name}
-              </p>
-              <p className="text-xs text-gray-500">Your workspace</p>
-            </div>
-          </div>
+      {/* ORGANIZATION SWITCHER */}
+      {!isSidebarCollapsed && (
+        <div className="mt-6 px-4">
+          <OrganizationSwitcher />
         </div>
       )}
 

@@ -1,4 +1,3 @@
-// src/pages/sso-callback.tsx
 import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
 import { Loader2 } from "lucide-react";
 
