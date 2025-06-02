@@ -2,6 +2,7 @@ import { useAuth, useUser, useOrganization } from "@clerk/clerk-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useProducts } from "@/hooks/use-api";
 
 export default function DebugAuth() {
   const { getToken, isSignedIn } = useAuth();
@@ -9,6 +10,8 @@ export default function DebugAuth() {
   const { organization } = useOrganization();
   const [tokenInfo, setTokenInfo] = useState<any>(null);
   const [rawToken, setRawToken] = useState<string>("");
+
+  const { data: productsData } = useProducts({ page: 1, pageSize: 5 });
 
   const decodeJWT = (token: string) => {
     try {
@@ -182,6 +185,33 @@ export default function DebugAuth() {
             </div>
           </div>
         </div>
+
+        {/* Products Debug */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Products Debug</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div>
+              <strong>Current Org Products:</strong>{" "}
+              {productsData?.totalCount || 0}
+            </div>
+            {productsData?.products?.slice(0, 3).map((product) => (
+              <div key={product.id} className="pl-4 text-xs">
+                • {product.name} (SKU: {product.sku})
+              </div>
+            ))}
+            {(productsData?.totalCount || 0) > 3 && (
+              <div className="pl-4 text-xs text-gray-500">
+                ...and {(productsData?.totalCount || 0) - 3} more
+              </div>
+            )}
+            <div className="text-red-600 text-xs mt-2">
+              ⚠️ If you see products from other orgs when switching, the backend
+              isn't filtering by organization ID properly.
+            </div>
+          </CardContent>
+        </Card>
       </CardContent>
     </Card>
   );

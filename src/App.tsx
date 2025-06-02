@@ -18,6 +18,7 @@ import UsersPage from "@/pages/userpage";
 import SettingsPage from "@/pages/settings";
 import ExpensesPage from "@/pages/expenses";
 import OrganizationSettingsPage from "@/pages/organization-settings";
+import CategoriesPage from "./pages/categories";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -80,6 +81,7 @@ function App() {
                   <Route path="/users" element={<UsersPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/expenses" element={<ExpensesPage />} />
+                  <Route path="/categories" element={<CategoriesPage />} />
                   <Route
                     path="/organization-settings"
                     element={<OrganizationSettingsPage />}

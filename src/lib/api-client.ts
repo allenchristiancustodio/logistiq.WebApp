@@ -149,6 +149,47 @@ export interface PagedProductResponse {
   hasPrevPage: boolean;
 }
 
+export interface CreateCategoryRequest {
+  name: string;
+  description?: string;
+  parentCategoryId?: string;
+}
+
+export interface UpdateCategoryRequest {
+  name: string;
+  description?: string;
+  parentCategoryId?: string;
+}
+
+export interface CategoryResponse {
+  id: string;
+  name: string;
+  description?: string;
+  parentCategoryId?: string;
+  parentCategoryName?: string;
+  createdAt: string;
+  createdBy?: string;
+  subCategories: CategoryResponse[];
+  productCount: number;
+}
+
+export interface CategorySearchRequest {
+  page?: number;
+  pageSize?: number;
+  searchTerm?: string;
+  parentCategoryId?: string;
+}
+
+export interface PagedCategoryResponse {
+  categories: CategoryResponse[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
 class ApiClient {
   private getToken: (() => Promise<string | null>) | null = null;
 
@@ -358,6 +399,54 @@ class ApiClient {
   ): Promise<{ isAvailable: boolean; sku: string }> {
     const params = excludeId ? `?excludeId=${excludeId}` : "";
     return this.request(`/products/check-sku/${sku}${params}`);
+  }
+
+  // Category endpoints
+  async getCategories(
+    params?: CategorySearchRequest
+  ): Promise<PagedCategoryResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.pageSize)
+      searchParams.append("pageSize", params.pageSize.toString());
+    if (params?.searchTerm)
+      searchParams.append("searchTerm", params.searchTerm);
+    if (params?.parentCategoryId)
+      searchParams.append("parentCategoryId", params.parentCategoryId);
+
+    const queryString = searchParams.toString();
+    return this.request(`/categories${queryString ? `?${queryString}` : ""}`);
+  }
+
+  async createCategory(data: CreateCategoryRequest): Promise<CategoryResponse> {
+    return this.request("/categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getCategory(id: string): Promise<CategoryResponse> {
+    return this.request(`/categories/${id}`);
+  }
+
+  async updateCategory(
+    id: string,
+    data: UpdateCategoryRequest
+  ): Promise<CategoryResponse> {
+    return this.request(`/categories/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    return this.request(`/categories/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getCategoryHierarchy(): Promise<CategoryResponse[]> {
+    return this.request("/categories/hierarchy");
   }
 }
 

@@ -11,6 +11,9 @@ import {
   type UpdateOrganizationRequest,
   type CompleteUserOnboardingRequest,
   type CompleteOrganizationSetupRequest,
+  type UpdateCategoryRequest,
+  type CreateCategoryRequest,
+  type CategorySearchRequest,
 } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -260,6 +263,106 @@ export const useCheckSkuAvailability = () => {
   });
 };
 
+export const categoryQueryKeys = {
+  categories: (orgId?: string, params?: CategorySearchRequest) =>
+    ["categories", orgId, params] as const,
+  category: (orgId?: string, id?: string) => ["category", orgId, id] as const,
+  categoryHierarchy: (orgId?: string) =>
+    ["categories", "hierarchy", orgId] as const,
+};
+
+// Category hooks with organization-specific caching
+export const useCategories = () => {
+  const { isSignedIn } = useAuth();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useQuery({
+    queryKey: ["categories", orgId],
+    queryFn: () => apiClient.getCategories(),
+    enabled: isSignedIn && !!orgId,
+    retry: false,
+  });
+};
+
+export const useCategory = (id: string) => {
+  const { isSignedIn } = useAuth();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useQuery({
+    queryKey: categoryQueryKeys.category(orgId, id),
+    queryFn: () => apiClient.getCategory(id),
+    enabled: isSignedIn && !!id && !!orgId,
+  });
+};
+
+export const useCategoryHierarchy = () => {
+  const { isSignedIn } = useAuth();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useQuery({
+    queryKey: categoryQueryKeys.categoryHierarchy(orgId),
+    queryFn: () => apiClient.getCategoryHierarchy(),
+    enabled: isSignedIn && !!orgId,
+  });
+};
+
+export const useCreateCategory = () => {
+  const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (data: CreateCategoryRequest) => apiClient.createCategory(data),
+    onSuccess: () => {
+      // Invalidate categories for current organization only
+      queryClient.invalidateQueries({
+        queryKey: ["categories", orgId],
+      });
+    },
+  });
+};
+
+export const useUpdateCategory = () => {
+  const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateCategoryRequest }) =>
+      apiClient.updateCategory(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["categories", orgId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: categoryQueryKeys.category(orgId, id),
+      });
+    },
+  });
+};
+
+export const useDeleteCategory = () => {
+  const queryClient = useQueryClient();
+  const orgId = useCurrentOrgId();
+  useApiClient();
+
+  return useMutation({
+    mutationFn: (id: string) => apiClient.deleteCategory(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["categories", orgId],
+      });
+      // Also invalidate products since category deletion affects them
+      queryClient.invalidateQueries({
+        queryKey: ["products", orgId],
+      });
+    },
+  });
+};
+
 // Utility hook to clear all organization-specific cache when switching orgs
 export const useClearOrganizationCache = () => {
   const queryClient = useQueryClient();
@@ -270,6 +373,7 @@ export const useClearOrganizationCache = () => {
     queryClient.removeQueries({ queryKey: ["organization"] });
     queryClient.removeQueries({ queryKey: ["orders"] });
     queryClient.removeQueries({ queryKey: ["customers"] });
+    queryClient.removeQueries({ queryKey: ["categories"] });
     // Add more as you build features
 
     console.log("🧹 Cleared organization-specific cache");
