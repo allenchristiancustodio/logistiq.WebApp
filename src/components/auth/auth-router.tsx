@@ -22,13 +22,14 @@ export function AuthRouter() {
   const [isInitializing, setIsInitializing] = useState(false);
   const [lastOrgId, setLastOrgId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [orgSwitchDelay, setOrgSwitchDelay] = useState(false);
 
   const {
     user: storeUser,
     organization: storeOrganization,
     setUser,
     setOrganization,
-    clearData,
+    clearOrganizationData,
   } = useAuthStore();
 
   const syncUserMutation = useSyncUser();
@@ -42,7 +43,7 @@ export function AuthRouter() {
   useEffect(() => {
     const currentOrgId = clerkOrganization?.id || null;
 
-    // If organization changed, clear store and re-sync
+    // If organization changed, clear organization data only and re-sync
     if (lastOrgId && currentOrgId && lastOrgId !== currentOrgId) {
       console.log(
         "🔄 Organization switched from",
@@ -50,19 +51,33 @@ export function AuthRouter() {
         "to",
         currentOrgId
       );
-      clearData();
+      clearOrganizationData();
+
+      // Set a delay to prevent modal from showing immediately
+      setOrgSwitchDelay(true);
+      setTimeout(() => {
+        setOrgSwitchDelay(false);
+      }, 1000); // 1 second delay
     }
 
     setLastOrgId(currentOrgId);
-  }, [clerkOrganization?.id, lastOrgId, clearData]);
+  }, [clerkOrganization?.id, lastOrgId, clearOrganizationData]);
 
   // Determine if onboarding is needed
   const needsUserOnboarding = !storeUser?.hasCompletedOnboarding;
   const needsOrgCreation = !clerkOrganization;
   const needsOrgSetup =
     clerkOrganization && !storeOrganization?.hasCompletedSetup;
+
+  // Don't show onboarding if we're in the middle of syncing organization data or during org switch delay
+  const isOrgSyncing =
+    clerkOrganization &&
+    !storeOrganization &&
+    (syncOrganizationMutation.isPending || isInitializing);
   const needsOnboarding =
-    needsUserOnboarding || needsOrgCreation || needsOrgSetup;
+    (needsUserOnboarding || needsOrgCreation || needsOrgSetup) &&
+    !isOrgSyncing &&
+    !orgSwitchDelay;
 
   console.log("🔍 Atomic Auth Debug:", {
     location: location.pathname,
@@ -73,6 +88,10 @@ export function AuthRouter() {
     needsUserOnboarding,
     needsOrgCreation,
     needsOrgSetup,
+    isOrgSyncing,
+    orgSwitchDelay,
+    syncPending: syncOrganizationMutation.isPending,
+    isInitializing,
     needsOnboarding,
     showOnboarding,
   });
@@ -176,8 +195,28 @@ export function AuthRouter() {
   // Handle onboarding modal
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
-    // The store will be updated by the onboarding mutations
-    // No need to do anything else here
+
+    // Force a re-evaluation of onboarding state after a short delay
+    // This ensures the updated store values are picked up
+    setTimeout(() => {
+      const { user: currentUser, organization: currentOrg } =
+        useAuthStore.getState();
+      const stillNeedsUserOnboarding = !currentUser?.hasCompletedOnboarding;
+      const stillNeedsOrgSetup =
+        clerkOrganization && !currentOrg?.hasCompletedSetup;
+
+      console.log("🔄 Re-evaluating onboarding state:", {
+        stillNeedsUserOnboarding,
+        stillNeedsOrgSetup,
+        userOnboardingStatus: currentUser?.hasCompletedOnboarding,
+        orgSetupStatus: currentOrg?.hasCompletedSetup,
+      });
+
+      // If onboarding is still needed, show the modal again
+      if (stillNeedsUserOnboarding || stillNeedsOrgSetup) {
+        setShowOnboarding(true);
+      }
+    }, 200);
   };
 
   // Show onboarding modal if needed (this replaces the old onboarding page)

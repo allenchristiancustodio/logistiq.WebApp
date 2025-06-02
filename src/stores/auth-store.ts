@@ -11,6 +11,7 @@ export interface User {
   fullName: string;
   currentOrganizationId?: string;
   phone?: string;
+  preferences?: string;
   imageUrl?: string;
   isActive: boolean;
   hasCompletedOnboarding: boolean;
@@ -42,6 +43,7 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setOrganization: (organization: Organization | null) => void;
   clearData: () => void;
+  clearOrganizationData: () => void;
 
   // Helper getters
   isUserSynced: () => boolean;

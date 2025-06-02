@@ -131,16 +131,25 @@ export function ComprehensiveOnboardingModal({
         imageUrl: clerkUser?.imageUrl,
       });
 
-      await completeUserOnboardingMutation.mutateAsync({
+      const updatedUser = await completeUserOnboardingMutation.mutateAsync({
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
         preferences: data.preferences,
       });
 
+      // Force update the user state to ensure hasCompletedOnboarding is true
+      if (updatedUser) {
+        const { setUser } = useAuthStore.getState();
+        setUser({
+          ...updatedUser,
+          hasCompletedOnboarding: true,
+        });
+      }
+
       toast.success("Profile completed successfully!");
 
-      // Move to next step
+      // Move to next step - user onboarding is now complete
       if (!clerkOrganization) {
         setActiveTab("create-org");
       } else if (!storeOrganization?.hasCompletedSetup) {
@@ -158,7 +167,18 @@ export function ComprehensiveOnboardingModal({
     data: ComprehensiveOrganizationSetupForm
   ) => {
     try {
-      await completeOrganizationSetupMutation.mutateAsync(data);
+      const updatedOrganization =
+        await completeOrganizationSetupMutation.mutateAsync(data);
+
+      // Force update the organization state to ensure hasCompletedSetup is true
+      if (updatedOrganization) {
+        const { setOrganization } = useAuthStore.getState();
+        setOrganization({
+          ...updatedOrganization,
+          hasCompletedSetup: true,
+        });
+      }
+
       toast.success("Organization setup completed successfully!");
       onComplete();
     } catch (error) {
