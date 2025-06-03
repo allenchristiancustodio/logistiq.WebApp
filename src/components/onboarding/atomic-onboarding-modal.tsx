@@ -1,4 +1,3 @@
-// src/components/onboarding/atomic-onboarding-modal.tsx
 import { useState, useEffect } from "react";
 import { useUser, useOrganization } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -20,12 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Building2, User, Crown } from "lucide-react";
 import {
   useCompleteUserOnboarding,
-  useUpdateUserProfile,
   useCompleteOrganizationSetup,
 } from "@/hooks/use-auth-api";
 import { useCreateTrialSubscription } from "@/hooks/use-subscriptions";

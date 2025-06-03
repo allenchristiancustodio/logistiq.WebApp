@@ -82,7 +82,7 @@ export default function OrganizationSettingsPage() {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isDirty },
+    formState: { isDirty },
   } = useForm<OrganizationUpdateForm>({
     defaultValues: {
       description: backendOrg?.description || "",

@@ -1,9 +1,8 @@
 // src/pages/products.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Plus,
   Search,
-  Filter,
   Edit2,
   Trash2,
   Package,
@@ -283,12 +282,12 @@ export default function ProductsPage() {
     return "default";
   };
 
-  const getCategoryName = (categoryId: string) => {
-    return (
-      categoriesData?.categories?.find((c) => c.id === categoryId)?.name ||
-      "Unknown Category"
-    );
-  };
+  // const getCategoryName = (categoryId: string) => {
+  //   return (
+  //     categoriesData?.categories?.find((c) => c.id === categoryId)?.name ||
+  //     "Unknown Category"
+  //   );
+  // };
 
   if (isLoading) {
     return <LoadingScreen message="Loading products..." />;

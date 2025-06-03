@@ -95,13 +95,6 @@ const TIME_ZONES = [
   { value: "Asia/Singapore", label: "Singapore" },
 ];
 
-const DATE_FORMATS = [
-  { value: "MM/dd/yyyy", label: "MM/DD/YYYY (US)" },
-  { value: "dd/MM/yyyy", label: "DD/MM/YYYY (UK)" },
-  { value: "yyyy-MM-dd", label: "YYYY-MM-DD (ISO)" },
-  { value: "dd.MM.yyyy", label: "DD.MM.YYYY (DE)" },
-];
-
 const COUNTRIES = [
   "United States",
   "Canada",

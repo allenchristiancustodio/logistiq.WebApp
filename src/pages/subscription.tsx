@@ -1,14 +1,12 @@
 // src/pages/subscription.tsx
 import { useState } from "react";
 import {
-  CreditCard,
   Crown,
   TrendingUp,
   Users,
   Package,
   ShoppingCart,
   Warehouse,
-  Calendar,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -63,7 +61,7 @@ export default function SubscriptionPage() {
     error: plansError,
   } = useAvailablePlans();
 
-  const { data: usage, isLoading: usageLoading } = useSubscriptionUsage();
+  const { data: usage } = useSubscriptionUsage();
 
   const features = useSubscriptionFeatures();
   const cancelSubscriptionMutation = useCancelSubscription();
@@ -157,8 +155,8 @@ export default function SubscriptionPage() {
     }
   };
 
-  const isPaidSubscription =
-    subscription?.stripeSubscriptionId && !subscription?.isTrialActive;
+  // const isPaidSubscription =
+  //   subscription?.stripeSubscriptionId && !subscription?.isTrialActive;
   const isActiveTrial =
     subscription?.isTrialActive && subscription?.daysRemaining > 0;
 

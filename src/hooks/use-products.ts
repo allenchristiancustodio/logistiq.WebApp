@@ -93,7 +93,6 @@ export const useDeleteProduct = () => {
 };
 
 export const useCheckSkuAvailability = () => {
-  const orgId = useCurrentOrgId();
   useApiClient();
 
   return useMutation({

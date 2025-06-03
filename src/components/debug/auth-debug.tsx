@@ -32,10 +32,10 @@ export default function DebugAuth() {
   const handleGetToken = async () => {
     try {
       const token = await getToken({ template: "logistiq-backend" });
-      setRawToken(token || "");
-
+      setRawToken(token?.toString() || "");
+      console.log("Raw Token:", rawToken);
       if (token) {
-        const decoded = decodeJWT(token);
+        const decoded = decodeJWT(token.toString());
         setTokenInfo({
           raw: token,
           decoded: decoded,

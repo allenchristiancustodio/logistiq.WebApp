@@ -24,7 +24,6 @@ export function SubscriptionLimitWarning({
   className,
 }: SubscriptionLimitWarningProps) {
   const { data: usage } = useSubscriptionUsage();
-  const features = useSubscriptionFeatures();
   const navigate = useNavigate();
 
   if (!usage?.usageMetrics) return null;

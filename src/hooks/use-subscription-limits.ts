@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { apiClient, useApiClient } from "@/lib/api-client";
+import { apiClient } from "@/lib/api-client";
 import { useCurrentSubscription } from "./use-subscriptions";
 
 export interface LimitCheckResult {
