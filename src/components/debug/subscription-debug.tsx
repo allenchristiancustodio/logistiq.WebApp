@@ -24,11 +24,24 @@ export default function SubscriptionDebug() {
   const {
     data: subscription,
     isLoading: subLoading,
+    error: subError,
     refetch: refetchSub,
   } = useCurrentSubscription();
-  const { data: usage, isLoading: usageLoading } = useSubscriptionUsage();
-  const { data: plans, isLoading: plansLoading } = useAvailablePlans();
-  const { data: prices, isLoading: pricesLoading } = useStripePrices();
+  const {
+    data: usage,
+    isLoading: usageLoading,
+    error: usageError,
+  } = useSubscriptionUsage();
+  const {
+    data: plans,
+    isLoading: plansLoading,
+    error: plansError,
+  } = useAvailablePlans();
+  const {
+    data: prices,
+    isLoading: pricesLoading,
+    error: pricesError,
+  } = useStripePrices();
 
   const createTrialMutation = useCreateTrialSubscription();
   const createCheckoutMutation = useCreateCheckoutSession();
@@ -303,12 +316,83 @@ export default function SubscriptionDebug() {
             </div>
           </div>
 
+          {/* API Debug Information */}
+          <div>
+            <h4 className="font-semibold mb-2">🔍 API Debug Info</h4>
+            <div className="bg-gray-50 p-3 rounded text-xs space-y-2">
+              <div>
+                <strong>Organization ID:</strong>{" "}
+                {organization?.id || "❌ No Org ID"}
+              </div>
+              <div>
+                <strong>Subscription API:</strong>
+                {subLoading
+                  ? " 🔄 Loading..."
+                  : subError
+                  ? ` ❌ Error: ${subError.message}`
+                  : subscription
+                  ? " ✅ Success"
+                  : " ⚠️ No data"}
+              </div>
+              <div>
+                <strong>Usage API:</strong>
+                {usageLoading
+                  ? " 🔄 Loading..."
+                  : usageError
+                  ? ` ❌ Error: ${usageError.message}`
+                  : usage
+                  ? " ✅ Success"
+                  : " ⚠️ No data"}
+              </div>
+              <div>
+                <strong>Plans API:</strong>
+                {plansLoading
+                  ? " 🔄 Loading..."
+                  : plansError
+                  ? ` ❌ Error: ${plansError.message}`
+                  : plans
+                  ? " ✅ Success"
+                  : " ⚠️ No data"}
+              </div>
+              <div>
+                <strong>Prices API:</strong>
+                {pricesLoading
+                  ? " 🔄 Loading..."
+                  : pricesError
+                  ? ` ❌ Error: ${pricesError.message}`
+                  : prices
+                  ? " ✅ Success"
+                  : " ⚠️ No data"}
+              </div>
+              {subscription && (
+                <div className="mt-2 p-2 bg-white rounded border">
+                  <strong>Raw Subscription Data:</strong>
+                  <pre className="text-xs overflow-auto max-h-32">
+                    {JSON.stringify(subscription, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* API Status */}
           <div className="text-xs text-gray-500 space-y-1">
-            <div>Subscription Loading: {subLoading ? "✅" : "❌"}</div>
-            <div>Usage Loading: {usageLoading ? "✅" : "❌"}</div>
-            <div>Plans Loading: {plansLoading ? "✅" : "❌"}</div>
-            <div>Prices Loading: {pricesLoading ? "✅" : "❌"}</div>
+            <div>
+              Subscription Loading: {subLoading ? "✅" : "❌"}{" "}
+              {subError && `(Error: ${subError.message})`}
+            </div>
+            <div>
+              Usage Loading: {usageLoading ? "✅" : "❌"}{" "}
+              {usageError && `(Error: ${usageError.message})`}
+            </div>
+            <div>
+              Plans Loading: {plansLoading ? "✅" : "❌"}{" "}
+              {plansError && `(Error: ${plansError.message})`}
+            </div>
+            <div>
+              Prices Loading: {pricesLoading ? "✅" : "❌"}{" "}
+              {pricesError && `(Error: ${pricesError.message})`}
+            </div>
           </div>
         </CardContent>
       </Card>

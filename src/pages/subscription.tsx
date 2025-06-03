@@ -10,6 +10,8 @@ import {
   Warehouse,
   Calendar,
   AlertTriangle,
+  CheckCircle,
+  Clock,
 } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { LoadingScreen } from "@/components/ui/loading-screen";
@@ -40,11 +42,13 @@ import {
   useCancelSubscription,
   useSubscriptionFeatures,
 } from "@/hooks/use-api";
+import { StripeCheckout } from "@/components/billing/stripe-checkout";
 import { toast } from "sonner";
 
 export default function SubscriptionPage() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const {
     data: subscription,
@@ -66,10 +70,7 @@ export default function SubscriptionPage() {
 
   const handleUpgrade = (planId: string) => {
     setSelectedPlan(planId);
-    // In a real app, this would redirect to Stripe Checkout or open a payment modal
-    toast.info(
-      `Upgrading to ${plans?.find((p) => p.id === planId)?.name} plan...`
-    );
+    setShowCheckout(true);
   };
 
   const handleCancelSubscription = async () => {
@@ -96,8 +97,16 @@ export default function SubscriptionPage() {
     }).format(amount);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+  const getStatusColor = (status: string | number | undefined | null) => {
+    if (!status) return "secondary";
+
+    // Handle both string and enum (number) status
+    const statusStr =
+      typeof status === "number"
+        ? getStatusString(status)
+        : status.toString().toLowerCase();
+
+    switch (statusStr.toLowerCase()) {
       case "active":
         return "default";
       case "trial":
@@ -110,6 +119,53 @@ export default function SubscriptionPage() {
         return "secondary";
     }
   };
+
+  const getStatusString = (status: string | number | undefined | null) => {
+    if (!status) return "Unknown";
+
+    // Handle enum values from backend
+    if (typeof status === "number") {
+      switch (status) {
+        case 0:
+          return "Trial";
+        case 1:
+          return "Active";
+        case 2:
+          return "Cancelled";
+        case 3:
+          return "PastDue";
+        default:
+          return "Unknown";
+      }
+    }
+
+    return status.toString();
+  };
+
+  const getStatusIcon = (status: string | number | undefined | null) => {
+    const statusStr = getStatusString(status).toLowerCase();
+
+    switch (statusStr) {
+      case "active":
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case "trial":
+        return <Clock className="w-4 h-4 text-blue-500" />;
+      case "cancelled":
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      default:
+        return <AlertTriangle className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const isPaidSubscription =
+    subscription?.stripeSubscriptionId && !subscription?.isTrialActive;
+  const isActiveTrial =
+    subscription?.isTrialActive && subscription?.daysRemaining > 0;
+
+  // Handle backend inconsistency: if we have Stripe IDs, it's a paid subscription
+  const hasStripeSubscription = !!subscription?.stripeSubscriptionId;
+  const isReallyTrial =
+    subscription?.isTrialActive && !subscription?.stripeSubscriptionId;
 
   if (subscriptionLoading || plansLoading) {
     return <LoadingScreen message="Loading subscription details..." />;
@@ -126,6 +182,34 @@ export default function SubscriptionPage() {
           message="There was an error loading your subscription details."
           onRetry={() => refetchSubscription()}
         />
+      </PageWrapper>
+    );
+  }
+
+  if (showCheckout) {
+    return (
+      <PageWrapper title="Upgrade Subscription" description="Choose your plan">
+        <div className="max-w-4xl mx-auto">
+          <Button
+            variant="outline"
+            onClick={() => setShowCheckout(false)}
+            className="mb-6"
+          >
+            ← Back to Subscription
+          </Button>
+          <StripeCheckout
+            defaultPlan={selectedPlan || "professional"}
+            onSuccess={() => {
+              setShowCheckout(false);
+              toast.success("Subscription upgraded successfully!");
+              refetchSubscription();
+            }}
+            onCancel={() => {
+              setShowCheckout(false);
+              toast.info("Upgrade cancelled");
+            }}
+          />
+        </div>
       </PageWrapper>
     );
   }
@@ -151,16 +235,23 @@ export default function SubscriptionPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Crown className="w-5 h-5 text-yellow-500" />
-                    Current Plan: {subscription?.planName}
+                    Current Plan: {subscription?.planName || "No Plan"}
                   </CardTitle>
-                  <CardDescription>
-                    {subscription?.isTrialActive
-                      ? `Trial expires in ${subscription.daysRemaining} days`
-                      : `Billing cycle: Monthly`}
+                  <CardDescription className="flex items-center gap-2 mt-1">
+                    {getStatusIcon(subscription?.status)}
+                    {isReallyTrial && (
+                      <span>
+                        Trial expires in {subscription.daysRemaining} days
+                      </span>
+                    )}
+                    {hasStripeSubscription && (
+                      <span>Billing cycle: Monthly</span>
+                    )}
+                    {!subscription && <span>No active subscription</span>}
                   </CardDescription>
                 </div>
-                <Badge variant={getStatusColor(subscription?.status || "")}>
-                  {subscription?.status}
+                <Badge variant={getStatusColor(subscription?.status)}>
+                  {getStatusString(subscription?.status)}
                 </Badge>
               </div>
             </CardHeader>
@@ -176,7 +267,13 @@ export default function SubscriptionPage() {
                   <div className="text-2xl font-bold">
                     {subscription?.daysRemaining || 0}
                   </div>
-                  <div className="text-sm text-gray-500">days remaining</div>
+                  <div className="text-sm text-gray-500">
+                    {isReallyTrial
+                      ? "trial days left"
+                      : hasStripeSubscription
+                      ? "days until next billing"
+                      : "days in cycle"}
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">
@@ -192,24 +289,29 @@ export default function SubscriptionPage() {
                 </div>
               </div>
 
-              {subscription?.isTrialActive && (
+              {/* Trial Warning */}
+              {isReallyTrial && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-blue-600 mt-0.5" />
-                    <div>
+                    <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
                       <h4 className="font-medium text-blue-900">
                         Trial Active
                       </h4>
                       <p className="text-sm text-blue-700">
                         Your trial expires on{" "}
-                        {new Date(subscription.endDate).toLocaleDateString()}.
-                        Upgrade now to continue using Logistiq without
+                        {subscription?.trialEndDate
+                          ? new Date(
+                              subscription.trialEndDate
+                            ).toLocaleDateString()
+                          : "unknown date"}
+                        . Upgrade now to continue using Logistiq without
                         interruption.
                       </p>
                       <Button
                         size="sm"
                         className="mt-2"
-                        onClick={() => setSelectedPlan("professional")}
+                        onClick={() => handleUpgrade("professional")}
                       >
                         Upgrade Now
                       </Button>
@@ -218,19 +320,57 @@ export default function SubscriptionPage() {
                 </div>
               )}
 
+              {/* Paid Subscription Info */}
+              {hasStripeSubscription && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-green-900">
+                        Subscription Active
+                      </h4>
+                      <p className="text-sm text-green-700">
+                        Your {subscription.planName} subscription is active.
+                        {subscription.stripeCustomerId && (
+                          <span> Billing managed through Stripe.</span>
+                        )}
+                        {subscription?.isTrialActive && (
+                          <span className="block text-orange-600 mt-1">
+                            Note: Your trial period is still active. This will
+                            automatically end when your trial expires.
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
               <div className="flex gap-3">
-                {subscription?.status === "Active" &&
-                  !subscription.isTrialActive && (
+                {hasStripeSubscription && (
+                  <>
                     <Button
                       variant="outline"
                       onClick={() => setIsCancelModalOpen(true)}
                     >
                       Cancel Subscription
                     </Button>
-                  )}
-                <Button onClick={() => setSelectedPlan("professional")}>
-                  {subscription?.isTrialActive ? "Upgrade Plan" : "Change Plan"}
-                </Button>
+                    <Button onClick={() => handleUpgrade("enterprise")}>
+                      Upgrade Plan
+                    </Button>
+                  </>
+                )}
+                {isReallyTrial && (
+                  <Button onClick={() => handleUpgrade("professional")}>
+                    Upgrade to Professional
+                  </Button>
+                )}
+                {!subscription && (
+                  <Button onClick={() => handleUpgrade("professional")}>
+                    Start Your Free Trial
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -247,7 +387,11 @@ export default function SubscriptionPage() {
                   {subscription?.currentUsers || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  of {subscription?.maxUsers || 0} allowed
+                  of{" "}
+                  {subscription?.maxUsers === 2147483647
+                    ? "∞"
+                    : subscription?.maxUsers || 0}{" "}
+                  allowed
                 </p>
               </CardContent>
             </Card>
@@ -262,7 +406,11 @@ export default function SubscriptionPage() {
                   {subscription?.currentProducts || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  of {subscription?.maxProducts || 0} allowed
+                  of{" "}
+                  {subscription?.maxProducts === 2147483647
+                    ? "∞"
+                    : subscription?.maxProducts || 0}{" "}
+                  allowed
                 </p>
               </CardContent>
             </Card>
@@ -277,7 +425,11 @@ export default function SubscriptionPage() {
                   {subscription?.currentOrders || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  of {subscription?.maxOrders || 0} this month
+                  of{" "}
+                  {subscription?.maxOrders === 2147483647
+                    ? "∞"
+                    : subscription?.maxOrders || 0}{" "}
+                  this month
                 </p>
               </CardContent>
             </Card>
@@ -294,7 +446,11 @@ export default function SubscriptionPage() {
                   {subscription?.currentWarehouses || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  of {subscription?.maxWarehouses || 0} allowed
+                  of{" "}
+                  {subscription?.maxWarehouses === 2147483647
+                    ? "∞"
+                    : subscription?.maxWarehouses || 0}{" "}
+                  allowed
                 </p>
               </CardContent>
             </Card>
@@ -315,38 +471,53 @@ export default function SubscriptionPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {usage?.usageMetrics &&
-                Object.entries(usage.usageMetrics).map(([key, metric]) => (
-                  <div key={key} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <div className="font-medium">{key}</div>
-                      <div className="text-sm text-gray-500">
-                        {metric.current} /{" "}
-                        {metric.limit === 2147483647 ? "∞" : metric.limit}
+                Object.entries(usage.usageMetrics).map(([key, metric]) => {
+                  const isUnlimited = metric.limit === 2147483647;
+                  const percentage = isUnlimited
+                    ? 0
+                    : Math.min(metric.percentageUsed, 100);
+
+                  return (
+                    <div key={key} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <div className="font-medium">{key}</div>
+                        <div className="text-sm text-gray-500">
+                          {metric.current} / {isUnlimited ? "∞" : metric.limit}
+                        </div>
                       </div>
+                      {!isUnlimited && (
+                        <>
+                          <Progress
+                            value={percentage}
+                            className={`h-2 ${
+                              metric.isNearLimit
+                                ? "bg-orange-100"
+                                : metric.isAtLimit
+                                ? "bg-red-100"
+                                : ""
+                            }`}
+                          />
+                          {metric.isNearLimit && !metric.isAtLimit && (
+                            <p className="text-xs text-orange-600">
+                              You're approaching your {key.toLowerCase()} limit
+                            </p>
+                          )}
+                          {metric.isAtLimit && (
+                            <p className="text-xs text-red-600">
+                              You've reached your {key.toLowerCase()} limit.
+                              Upgrade to add more.
+                            </p>
+                          )}
+                        </>
+                      )}
+                      {isUnlimited && (
+                        <p className="text-xs text-green-600">
+                          Unlimited {key.toLowerCase()} with your current plan
+                        </p>
+                      )}
                     </div>
-                    <Progress
-                      value={Math.min(metric.percentageUsed, 100)}
-                      className={`h-2 ${
-                        metric.isNearLimit
-                          ? "bg-orange-100"
-                          : metric.isAtLimit
-                          ? "bg-red-100"
-                          : ""
-                      }`}
-                    />
-                    {metric.isNearLimit && !metric.isAtLimit && (
-                      <p className="text-xs text-orange-600">
-                        You're approaching your {key.toLowerCase()} limit
-                      </p>
-                    )}
-                    {metric.isAtLimit && (
-                      <p className="text-xs text-red-600">
-                        You've reached your {key.toLowerCase()} limit. Upgrade
-                        to add more.
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
             </CardContent>
           </Card>
 
@@ -407,100 +578,110 @@ export default function SubscriptionPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans?.map((plan) => (
-              <Card
-                key={plan.id}
-                className={`relative ${
-                  plan.isPopular ? "border-blue-500 border-2" : ""
-                }`}
-              >
-                {plan.isPopular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-blue-500">Most Popular</Badge>
-                  </div>
-                )}
-                <CardHeader className="text-center">
-                  <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <div className="text-3xl font-bold">
-                      {formatCurrency(plan.monthlyPrice)}
+            {plans?.map((plan) => {
+              const isCurrentPlan =
+                plan.id === subscription?.planName?.toLowerCase();
+              const isUpgrade =
+                plan.monthlyPrice > (subscription?.monthlyPrice || 0);
+
+              return (
+                <Card
+                  key={plan.id}
+                  className={`relative ${
+                    plan.isPopular ? "border-blue-500 border-2" : ""
+                  } ${isCurrentPlan ? "bg-blue-50 border-blue-300" : ""}`}
+                >
+                  {plan.isPopular && (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <Badge className="bg-blue-500">Most Popular</Badge>
                     </div>
-                    <div className="text-sm text-gray-500">per month</div>
-                    {plan.annualPrice > 0 && (
-                      <div className="text-xs text-green-600 mt-1">
-                        Save{" "}
-                        {formatCurrency(
-                          plan.monthlyPrice * 12 - plan.annualPrice
-                        )}{" "}
-                        annually
+                  )}
+                  {isCurrentPlan && (
+                    <div className="absolute -top-3 right-4">
+                      <Badge className="bg-green-500">Current Plan</Badge>
+                    </div>
+                  )}
+                  <CardHeader className="text-center">
+                    <CardTitle className="text-xl">{plan.name}</CardTitle>
+                    <CardDescription>{plan.description}</CardDescription>
+                    <div className="mt-4">
+                      <div className="text-3xl font-bold">
+                        {formatCurrency(plan.monthlyPrice)}
                       </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-2">
-                    {plan.features.map((feature, index) => (
-                      <li
-                        key={index}
-                        className="flex items-center gap-2 text-sm"
-                      >
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
+                      <div className="text-sm text-gray-500">per month</div>
+                      {plan.annualPrice > 0 && (
+                        <div className="text-xs text-green-600 mt-1">
+                          Save{" "}
+                          {formatCurrency(
+                            plan.monthlyPrice * 12 - plan.annualPrice
+                          )}{" "}
+                          annually
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <ul className="space-y-2">
+                      {plan.features.map((feature, index) => (
+                        <li
+                          key={index}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <CheckCircle className="w-3 h-3 text-green-500" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
 
-                  <div className="space-y-2 text-xs text-gray-500 border-t pt-4">
-                    <div>
-                      Up to{" "}
-                      {plan.maxUsers === 2147483647
-                        ? "unlimited"
-                        : plan.maxUsers}{" "}
-                      users
+                    <div className="space-y-2 text-xs text-gray-500 border-t pt-4">
+                      <div>
+                        Up to{" "}
+                        {plan.maxUsers === 2147483647
+                          ? "unlimited"
+                          : plan.maxUsers}{" "}
+                        users
+                      </div>
+                      <div>
+                        Up to{" "}
+                        {plan.maxProducts === 2147483647
+                          ? "unlimited"
+                          : plan.maxProducts.toLocaleString()}{" "}
+                        products
+                      </div>
+                      <div>
+                        Up to{" "}
+                        {plan.maxOrders === 2147483647
+                          ? "unlimited"
+                          : plan.maxOrders.toLocaleString()}{" "}
+                        orders/month
+                      </div>
+                      <div>
+                        Up to{" "}
+                        {plan.maxWarehouses === 2147483647
+                          ? "unlimited"
+                          : plan.maxWarehouses}{" "}
+                        warehouses
+                      </div>
                     </div>
-                    <div>
-                      Up to{" "}
-                      {plan.maxProducts === 2147483647
-                        ? "unlimited"
-                        : plan.maxProducts.toLocaleString()}{" "}
-                      products
-                    </div>
-                    <div>
-                      Up to{" "}
-                      {plan.maxOrders === 2147483647
-                        ? "unlimited"
-                        : plan.maxOrders.toLocaleString()}{" "}
-                      orders/month
-                    </div>
-                    <div>
-                      Up to{" "}
-                      {plan.maxWarehouses === 2147483647
-                        ? "unlimited"
-                        : plan.maxWarehouses}{" "}
-                      warehouses
-                    </div>
-                  </div>
 
-                  <Button
-                    className="w-full"
-                    variant={
-                      plan.id === subscription?.planName.toLowerCase()
-                        ? "outline"
-                        : "default"
-                    }
-                    onClick={() => handleUpgrade(plan.id)}
-                    disabled={plan.id === subscription?.planName.toLowerCase()}
-                  >
-                    {plan.id === subscription?.planName.toLowerCase()
-                      ? "Current Plan"
-                      : subscription?.isTrialActive
-                      ? "Start Free Trial"
-                      : "Upgrade"}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <Button
+                      className="w-full"
+                      variant={isCurrentPlan ? "outline" : "default"}
+                      onClick={() => handleUpgrade(plan.id)}
+                      disabled={isCurrentPlan}
+                    >
+                      {isCurrentPlan
+                        ? "Current Plan"
+                        : isActiveTrial
+                        ? "Start Free Trial"
+                        : isUpgrade
+                        ? "Upgrade"
+                        : "Downgrade"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>
@@ -512,8 +693,14 @@ export default function SubscriptionPage() {
             <DialogTitle>Cancel Subscription</DialogTitle>
             <DialogDescription>
               Are you sure you want to cancel your subscription? You'll continue
-              to have access until the end of your current billing period (
-              {new Date(subscription?.endDate || "").toLocaleDateString()}).
+              to have access until the end of your current billing period
+              {subscription?.endDate && (
+                <span>
+                  {" "}
+                  ({new Date(subscription.endDate).toLocaleDateString()})
+                </span>
+              )}
+              .
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
