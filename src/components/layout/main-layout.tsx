@@ -19,16 +19,13 @@ export default function MainLayout() {
     }
   }, [isDarkMode]);
 
-  // Pages that shouldn't show the sidebar/navbar layout
   const fullPageRoutes = ["/onboarding"];
   const shouldShowFullLayout = !fullPageRoutes.includes(location.pathname);
 
-  // If it's a full-page route (like onboarding), just render the outlet
   if (!shouldShowFullLayout) {
     return <Outlet />;
   }
 
-  // Regular dashboard layout
   return (
     <div
       className={`${

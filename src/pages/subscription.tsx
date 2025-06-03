@@ -41,7 +41,7 @@ import {
   useSubscriptionUsage,
   useCancelSubscription,
   useSubscriptionFeatures,
-} from "@/hooks/use-api";
+} from "@/hooks/use-subscriptions";
 import { StripeCheckout } from "@/components/billing/stripe-checkout";
 import { toast } from "sonner";
 

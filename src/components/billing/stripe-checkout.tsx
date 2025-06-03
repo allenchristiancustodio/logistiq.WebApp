@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCreateCheckoutSession, useStripePrices } from "@/hooks/use-api";
+import {
+  useCreateCheckoutSession,
+  useStripePrices,
+} from "@/hooks/use-subscriptions";
 import { toast } from "sonner";
 
 interface StripeCheckoutProps {

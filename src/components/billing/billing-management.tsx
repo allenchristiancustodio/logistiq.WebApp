@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   useCurrentSubscription,
   useCreatePortalSession,
-} from "@/hooks/use-api";
+} from "@/hooks/use-subscriptions";
 import { toast } from "sonner";
 
 export function BillingManagement() {

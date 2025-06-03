@@ -25,9 +25,10 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Building2, User, Crown } from "lucide-react";
 import {
   useCompleteUserOnboarding,
+  useUpdateUserProfile,
   useCompleteOrganizationSetup,
-  useCreateTrialSubscription,
-} from "@/hooks/use-api";
+} from "@/hooks/use-auth-api";
+import { useCreateTrialSubscription } from "@/hooks/use-subscriptions";
 import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "sonner";
 

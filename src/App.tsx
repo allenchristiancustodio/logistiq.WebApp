@@ -20,6 +20,7 @@ import ExpensesPage from "@/pages/expenses";
 import OrganizationSettingsPage from "@/pages/organization-settings";
 import CategoriesPage from "./pages/categories";
 import SubscriptionPage from "./pages/subscription"; // Add this import
+import DebugPage from "./pages/debug"; // Add debug page import
 
 // Create a client
 const queryClient = new QueryClient({
@@ -84,6 +85,7 @@ function App() {
                   <Route path="/expenses" element={<ExpensesPage />} />
                   <Route path="/categories" element={<CategoriesPage />} />
                   <Route path="/subscription" element={<SubscriptionPage />} />
+                  <Route path="/debug" element={<DebugPage />} />
                   <Route
                     path="/organization-settings"
                     element={<OrganizationSettingsPage />}

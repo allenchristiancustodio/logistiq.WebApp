@@ -13,7 +13,6 @@ import {
   useSubscriptionFeatures,
 } from "../../hooks/use-api";
 import { useNavigate } from "react-router-dom";
-import React from "react";
 
 interface SubscriptionLimitWarningProps {
   limitType: "users" | "products" | "orders" | "warehouses";
@@ -72,7 +71,7 @@ export function SubscriptionLimitWarning({
             {metric.isAtLimit ? "Limit Reached" : "Approaching Limit"}
           </CardTitle>
           <Badge variant="outline" className="ml-auto">
-            {features.planName}
+            {/* {features.planName.toLowerCase()} */}
           </Badge>
         </div>
       </CardHeader>
@@ -132,8 +131,8 @@ export function useSubscriptionLimitCheck() {
 
   return {
     checkLimit,
-    isTrialActive: features.isTrialActive,
-    planName: features.planName,
+    // isTrialActive: features.isTrialActive,
+    // planName: features.planName,
     hasReporting: features.hasReporting,
     hasAdvancedReporting: features.hasAdvancedReporting,
     hasInvoicing: features.hasInvoicing,

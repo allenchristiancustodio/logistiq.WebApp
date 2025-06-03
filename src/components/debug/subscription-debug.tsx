@@ -7,12 +7,13 @@ import {
   useSubscriptionUsage,
   useAvailablePlans,
   useCreateTrialSubscription,
-  useCreateCheckoutSession,
   useStripePrices,
-} from "@/hooks/use-api";
+  useCreateCheckoutSession,
+} from "@/hooks/use-subscriptions";
 import { useUser, useOrganization } from "@clerk/clerk-react";
 import { Crown, CreditCard, Package, Users } from "lucide-react";
 import { toast } from "sonner";
+import { SubscriptionApiDebug } from "./subscription-api-debug";
 
 export default function SubscriptionDebug() {
   const { user } = useUser();
@@ -119,6 +120,9 @@ export default function SubscriptionDebug() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* NEW: Raw API Debug */}
+      <SubscriptionApiDebug />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

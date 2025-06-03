@@ -8,7 +8,7 @@ import {
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { ComprehensiveOnboardingModal } from "@/components/onboarding/atomic-onboarding-modal";
 import { useAuthStore } from "@/stores/auth-store";
-import { useSyncUser, useSyncOrganization } from "@/hooks/use-api";
+import { useSyncUser, useSyncOrganization } from "@/hooks/use-auth-api";
 
 // Public routes that don't require authentication
 const PUBLIC_ROUTES = ["/login", "/register", "/sso-callback"];
