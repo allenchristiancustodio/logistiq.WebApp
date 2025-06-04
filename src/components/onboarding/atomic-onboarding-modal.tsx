@@ -26,6 +26,7 @@ import {
 } from "@/hooks/use-auth-api";
 import { useCreateTrialSubscription } from "@/hooks/use-subscriptions";
 import { useAuthStore } from "@/stores/auth-store";
+import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 
 interface ComprehensiveOnboardingModalProps {
@@ -116,6 +117,45 @@ export function ComprehensiveOnboardingModal({
 
   const handleSubscriptionSetup = async () => {
     try {
+      // Ensure we have both a Clerk organization and a synced store organization
+      if (!clerkOrganization) {
+        toast.error(
+          "No organization found. Please create an organization first."
+        );
+        return;
+      }
+
+      if (!storeOrganization) {
+        toast.error(
+          "Organization not fully synced. Please wait a moment and try again."
+        );
+        return;
+      }
+
+      console.log("🔄 Creating trial subscription for org:", {
+        clerkOrgId: clerkOrganization.id,
+        clerkOrgName: clerkOrganization.name,
+        storeOrgId: storeOrganization.id,
+        storeOrgName: storeOrganization.name,
+        hasCompletedSetup: storeOrganization.hasCompletedSetup,
+      });
+
+      // Add a small delay to ensure backend has processed organization sync
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Try to get a fresh token before the subscription creation
+      console.log("🔄 About to create trial with current auth context");
+
+      // Test authentication with backend before creating subscription
+      try {
+        console.log("🔍 Testing authentication with backend...");
+        await apiClient.authTest();
+        console.log("✅ Auth test successful - proceeding with trial creation");
+      } catch (authError: any) {
+        console.error("❌ Auth test failed:", authError);
+        throw new Error(`Authentication failed: ${authError.message}`);
+      }
+
       await createTrialMutation.mutateAsync({
         planName: "Trial",
         trialDays: 14,
@@ -123,7 +163,33 @@ export function ComprehensiveOnboardingModal({
       toast.success("Trial subscription activated!");
       onComplete();
     } catch (error: any) {
-      toast.error("Failed to activate trial subscription");
+      console.error("❌ Failed to create trial subscription:", error);
+
+      // Provide specific error messages based on the error type
+      if (error.message?.includes("Authentication failed")) {
+        toast.error(
+          "Authentication error. Please try refreshing the page and completing onboarding again."
+        );
+      } else if (
+        error.message?.includes("401") ||
+        error.message?.includes("403") ||
+        error.message?.toLowerCase().includes("not authorized")
+      ) {
+        toast.error(
+          "Authorization error. The organization may still be syncing. You can create a trial subscription later from the subscription page."
+        );
+      } else if (error.message?.toLowerCase().includes("organization")) {
+        toast.error(
+          "Organization not found on backend. Please contact support if this persists."
+        );
+      } else {
+        toast.error(
+          `Failed to activate trial subscription: ${
+            error.message || "Unknown error"
+          }`
+        );
+      }
+
       // Don't block onboarding if trial creation fails
       onComplete();
     }

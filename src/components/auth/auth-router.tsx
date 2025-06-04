@@ -157,11 +157,19 @@ export function AuthRouter() {
           setOrganization(orgResult);
           console.log(
             "✅ Organization synced - setup completed:",
-            orgResult.hasCompletedSetup
+            orgResult.hasCompletedSetup,
+            "Org ID:",
+            orgResult.id
           );
         }
       } catch (error: any) {
         console.error("❌ Failed to sync data:", error);
+        // If organization sync fails, this could cause auth issues for subsequent API calls
+        if (error.message?.includes("401") || error.message?.includes("403")) {
+          console.error(
+            "🚨 Authentication error during sync - this may affect trial subscription creation"
+          );
+        }
       } finally {
         setIsInitializing(false);
       }
