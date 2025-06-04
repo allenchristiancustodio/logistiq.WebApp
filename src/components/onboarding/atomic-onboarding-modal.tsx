@@ -27,6 +27,7 @@ import {
 import { useCreateTrialSubscription } from "@/hooks/use-subscriptions";
 import { useAuthStore } from "@/stores/auth-store";
 import { apiClient } from "@/lib/api-client";
+import { OrganizationCreationStep } from "./organization-creation-step";
 import { toast } from "sonner";
 
 interface ComprehensiveOnboardingModalProps {
@@ -43,7 +44,7 @@ export function ComprehensiveOnboardingModal({
   const { user: storeUser, organization: storeOrganization } = useAuthStore();
 
   const [currentStep, setCurrentStep] = useState<
-    "user" | "organization" | "subscription"
+    "user" | "organization-create" | "organization" | "subscription"
   >("user");
   const [userForm, setUserForm] = useState({
     firstName: clerkUser?.firstName || "",
@@ -69,26 +70,31 @@ export function ComprehensiveOnboardingModal({
 
   // Determine which steps are needed
   const needsUserOnboarding = !storeUser?.hasCompletedOnboarding;
+  const needsOrgCreation = !clerkOrganization; // No Clerk organization exists
   const needsOrgSetup =
-    clerkOrganization && !storeOrganization?.hasCompletedSetup;
+    clerkOrganization && !storeOrganization?.hasCompletedSetup; // Org exists in Clerk but not set up in backend
   const needsSubscription = true; // Always create trial subscription during onboarding
 
   useEffect(() => {
     if (needsUserOnboarding) {
       setCurrentStep("user");
+    } else if (needsOrgCreation) {
+      setCurrentStep("organization-create");
     } else if (needsOrgSetup) {
       setCurrentStep("organization");
     } else if (needsSubscription) {
       setCurrentStep("subscription");
     }
-  }, [needsUserOnboarding, needsOrgSetup, needsSubscription]);
+  }, [needsUserOnboarding, needsOrgCreation, needsOrgSetup, needsSubscription]);
 
   const handleUserSubmit = async () => {
     try {
       await completeUserOnboardingMutation.mutateAsync(userForm);
       toast.success("Profile completed!");
 
-      if (needsOrgSetup) {
+      if (needsOrgCreation) {
+        setCurrentStep("organization-create");
+      } else if (needsOrgSetup) {
         setCurrentStep("organization");
       } else if (needsSubscription) {
         setCurrentStep("subscription");
@@ -98,6 +104,23 @@ export function ComprehensiveOnboardingModal({
     } catch (error: any) {
       toast.error("Failed to complete profile setup");
     }
+  };
+
+  const handleOrgCreated = () => {
+    // When organization is created via Clerk, move to organization setup
+    // The auth router will handle syncing the new organization
+    toast.success("Organization created! Setting up details...");
+
+    // Small delay to allow Clerk organization to sync
+    setTimeout(() => {
+      if (needsOrgSetup) {
+        setCurrentStep("organization");
+      } else if (needsSubscription) {
+        setCurrentStep("subscription");
+      } else {
+        onComplete();
+      }
+    }, 1000);
   };
 
   const handleOrgSubmit = async () => {
@@ -198,6 +221,7 @@ export function ComprehensiveOnboardingModal({
   const getProgress = () => {
     const steps = [
       needsUserOnboarding ? "user" : null,
+      needsOrgCreation ? "organization-create" : null,
       needsOrgSetup ? "organization" : null,
       needsSubscription ? "subscription" : null,
     ].filter(Boolean);
@@ -210,6 +234,8 @@ export function ComprehensiveOnboardingModal({
     switch (currentStep) {
       case "user":
         return "Complete Your Profile";
+      case "organization-create":
+        return "Create Organization";
       case "organization":
         return "Organization Setup";
       case "subscription":
@@ -324,6 +350,28 @@ export function ComprehensiveOnboardingModal({
                   ? "Saving..."
                   : "Continue"}
               </Button>
+            </div>
+          )}
+
+          {/* Organization Creation Step */}
+          {currentStep === "organization-create" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold">
+                  Create Your Organization
+                </h3>
+              </div>
+
+              <OrganizationCreationStep
+                onOrganizationCreated={handleOrgCreated}
+              />
+
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Create your organization using the form above to continue.
+                </p>
+              </div>
             </div>
           )}
 
