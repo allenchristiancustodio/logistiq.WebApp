@@ -18,8 +18,6 @@ export default function ClerkProviderWrapper({
   return (
     <ClerkProvider
       publishableKey={PUBLISHABLE_KEY}
-      signInFallbackRedirectUrl="/"
-      signUpFallbackRedirectUrl="/"
       appearance={{
         baseTheme: [], // Optional: dark theme support
         elements: {
