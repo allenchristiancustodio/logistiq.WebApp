@@ -70,10 +70,14 @@ export function AuthRouter() {
     clerkOrganization && !storeOrganization?.hasCompletedSetup;
 
   // Don't show onboarding if we're in the middle of syncing organization data or during org switch delay
+  // Also don't show if we're still loading organization data from Clerk
   const isOrgSyncing =
-    clerkOrganization &&
-    !storeOrganization &&
-    (syncOrganizationMutation.isPending || isInitializing);
+    (clerkOrganization &&
+      !storeOrganization &&
+      (syncOrganizationMutation.isPending || isInitializing)) ||
+    !orgLoaded ||
+    !isLoaded; // Still loading Clerk data
+
   const needsOnboarding =
     (needsUserOnboarding || needsOrgCreation || needsOrgSetup) &&
     !isOrgSyncing &&
@@ -82,9 +86,10 @@ export function AuthRouter() {
   console.log("🔍 Atomic Auth Debug:", {
     location: location.pathname,
     isSignedIn,
-    clerkOrganization: clerkOrganization?.name,
+    orgLoaded,
+    clerkOrganization: clerkOrganization?.name || "null",
     storeUser: storeUser?.email,
-    storeOrg: storeOrganization?.name,
+    storeOrg: storeOrganization?.name || "null",
     needsUserOnboarding,
     needsOrgCreation,
     needsOrgSetup,

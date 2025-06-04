@@ -11,9 +11,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  server: {
+  server: {,
     port: 3000,
     host: true,
+  },
+  preview: {
+    port: 10000, // Render uses port 10000 for web services
+    host: "0.0.0.0", // Allow external connections
   },
   define: {
     "process.env": process.env,
