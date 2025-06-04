@@ -13,8 +13,8 @@ export default function SSOCallbackPage() {
 
         {/* Clerk's built-in SSO callback handler */}
         <AuthenticateWithRedirectCallback
-          afterSignInUrl="/dashboard"
-          afterSignUpUrl="/dashboard"
+          signInForceRedirectUrl="/dashboard"
+          signUpForceRedirectUrl="/login"
         />
       </div>
     </div>
