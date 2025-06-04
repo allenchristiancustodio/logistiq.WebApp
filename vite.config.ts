@@ -17,7 +17,8 @@ export default defineConfig({
   },
   preview: {
     port: 10000, // Render uses port 10000 for web services
-    host: "0.0.0.0", // Allow external connections
+    host: "0.0.0.0",
+    allowedHosts: ["logistiq-webapp.onrender.com"], // Allow external connections
   },
   build: {
     outDir: "dist", // Default, but being explicit
