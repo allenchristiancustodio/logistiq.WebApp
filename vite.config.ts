@@ -11,7 +11,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  server: {,
+  server: {
     port: 3000,
     host: true,
   },
@@ -19,7 +19,13 @@ export default defineConfig({
     port: 10000, // Render uses port 10000 for web services
     host: "0.0.0.0", // Allow external connections
   },
-  define: {
-    "process.env": process.env,
+  build: {
+    outDir: "dist", // Default, but being explicit
+    sourcemap: false, // Disable sourcemaps for production (optional)
+    rollupOptions: {
+      output: {
+        manualChunks: undefined, // Let Vite handle chunking automatically
+      },
+    },
   },
 });
