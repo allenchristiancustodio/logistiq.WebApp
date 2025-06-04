@@ -70,7 +70,7 @@ function App() {
                 <Route path="/login/*" element={<LoginPage />} />
                 <Route path="/register/*" element={<RegisterPage />} />
                 <Route
-                  path="login/sso-callback"
+                  path="/login/sso-callback"
                   element={<SSOCallbackPage />}
                 />
 
