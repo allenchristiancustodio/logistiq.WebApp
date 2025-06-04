@@ -87,6 +87,14 @@ export function ComprehensiveOnboardingModal({
     }
   }, [needsUserOnboarding, needsOrgCreation, needsOrgSetup, needsSubscription]);
 
+  // Detect when organization is created and advance step
+  useEffect(() => {
+    if (currentStep === "organization-create" && clerkOrganization) {
+      console.log("🎉 Organization detected, advancing to setup step");
+      handleOrgCreated();
+    }
+  }, [currentStep, clerkOrganization]);
+
   const handleUserSubmit = async () => {
     try {
       await completeUserOnboardingMutation.mutateAsync(userForm);
@@ -111,16 +119,20 @@ export function ComprehensiveOnboardingModal({
     // The auth router will handle syncing the new organization
     toast.success("Organization created! Setting up details...");
 
-    // Small delay to allow Clerk organization to sync
+    // Small delay to allow Clerk organization to sync and auth router to process
     setTimeout(() => {
-      if (needsOrgSetup) {
+      // Re-evaluate which step is needed since organization now exists
+      const hasOrgNow = !!clerkOrganization;
+      const needsSetup = hasOrgNow && !storeOrganization?.hasCompletedSetup;
+
+      if (needsSetup) {
         setCurrentStep("organization");
       } else if (needsSubscription) {
         setCurrentStep("subscription");
       } else {
         onComplete();
       }
-    }, 1000);
+    }, 1500); // Slightly longer delay to ensure sync
   };
 
   const handleOrgSubmit = async () => {
@@ -363,9 +375,7 @@ export function ComprehensiveOnboardingModal({
                 </h3>
               </div>
 
-              <OrganizationCreationStep
-                onOrganizationCreated={handleOrgCreated}
-              />
+              <OrganizationCreationStep />
 
               <div className="text-center">
                 <p className="text-sm text-gray-600">

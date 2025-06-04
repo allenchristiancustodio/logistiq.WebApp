@@ -8,13 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-interface OrganizationCreationStepProps {
-  onOrganizationCreated?: () => void;
-}
-
-export function OrganizationCreationStep({
-  onOrganizationCreated,
-}: OrganizationCreationStepProps) {
+export function OrganizationCreationStep() {
   return (
     <Card>
       <CardHeader>
@@ -30,9 +24,7 @@ export function OrganizationCreationStep({
         <CreateOrganization
           skipInvitationScreen={true}
           hideSlug={false}
-          afterCreateOrganizationUrl="#" // Don't redirect, stay in modal
-          routing="virtual" // Use virtual routing to prevent page navigation
-          afterCreateOrganization={onOrganizationCreated}
+          afterCreateOrganizationUrl="/dashboard"
           appearance={{
             elements: {
               formButtonPrimary:
