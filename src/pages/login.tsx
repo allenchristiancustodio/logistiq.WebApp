@@ -22,8 +22,6 @@ export default function LoginPage() {
           routing="path"
           path="/login"
           signUpUrl="/register"
-          forceRedirectUrl="/dashboard"
-          fallbackRedirectUrl="/dashboard"
           appearance={{
             elements: {
               formButtonPrimary: "bg-blue-600 hover:bg-blue-700 text-white",
