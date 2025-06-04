@@ -69,7 +69,10 @@ function App() {
                 {/* Public Routes */}
                 <Route path="/login/*" element={<LoginPage />} />
                 <Route path="/register/*" element={<RegisterPage />} />
-                <Route path="/sso-callback" element={<SSOCallbackPage />} />
+                <Route
+                  path="login/sso-callback"
+                  element={<SSOCallbackPage />}
+                />
 
                 {/* Protected Routes with Layout */}
                 <Route element={<MainLayout />}>
